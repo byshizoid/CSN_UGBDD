@@ -111,6 +111,11 @@ class ClosuresApp {
         this.updateCheckInterval = null;
         this.isCheckingUpdate = false; // Флаг для предотвращения одновременных проверок
         
+        // Отсчёт времени для таблички загрузки
+        this.loadingTimerInterval = null;
+        this.commitStartTime = null; // Время начала коммита (для отсчёта)
+        this.lastCommitTime = null; // Время последнего найденного коммита
+        
         this.init();
     }
 
@@ -960,13 +965,20 @@ class ClosuresApp {
         this.renderClosureButtons();
     }
 
-    showLoadingOverlay(message = 'Идёт загрузка данных') {
+    showLoadingOverlay(message = 'Идёт загрузка данных', commitTime = null) {
         const overlay = document.getElementById('loadingOverlay');
         const messageElement = overlay?.querySelector('.loading-message');
         if (overlay) {
-            if (messageElement) {
-                messageElement.textContent = message;
+            // Сохраняем время коммита для отсчёта
+            if (commitTime) {
+                this.commitStartTime = new Date(commitTime);
+            } else {
+                this.commitStartTime = new Date(); // Если время не передано, используем текущее
             }
+            
+            // Обновляем сообщение с отсчётом времени
+            this.updateLoadingMessage(message);
+            
             overlay.style.display = 'flex';
             overlay.style.zIndex = '999999';
             overlay.style.pointerEvents = 'all';
@@ -987,8 +999,55 @@ class ClosuresApp {
             // Блокируем все события клавиатуры и мыши на уровне документа
             this.blockAllInteractions();
             
+            // Запускаем обновление отсчёта времени каждую секунду
+            this.startLoadingTimer(message);
+            
             console.log('🔒 Интерфейс заблокирован');
         }
+    }
+    
+    updateLoadingMessage(baseMessage) {
+        const messageElement = document.querySelector('#loadingOverlay .loading-message');
+        if (!messageElement) return;
+        
+        if (this.commitStartTime) {
+            const now = new Date();
+            const diffMs = now.getTime() - this.commitStartTime.getTime();
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const remainingSeconds = diffSeconds % 60;
+            
+            let timeText = '';
+            if (diffMinutes > 0) {
+                timeText = `${diffMinutes} мин ${remainingSeconds} сек`;
+            } else {
+                timeText = `${diffSeconds} сек`;
+            }
+            
+            messageElement.textContent = `${baseMessage}\n⏱ Прошло времени: ${timeText}`;
+        } else {
+            messageElement.textContent = baseMessage;
+        }
+    }
+    
+    startLoadingTimer(baseMessage) {
+        // Останавливаем предыдущий таймер, если есть
+        if (this.loadingTimerInterval) {
+            clearInterval(this.loadingTimerInterval);
+        }
+        
+        // Обновляем отсчёт каждую секунду
+        this.loadingTimerInterval = setInterval(() => {
+            this.updateLoadingMessage(baseMessage);
+        }, 1000);
+    }
+    
+    stopLoadingTimer() {
+        if (this.loadingTimerInterval) {
+            clearInterval(this.loadingTimerInterval);
+            this.loadingTimerInterval = null;
+        }
+        this.commitStartTime = null;
     }
     
     blockAllInteractions() {
@@ -1052,6 +1111,9 @@ class ClosuresApp {
     hideLoadingOverlay() {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
+            // Останавливаем таймер отсчёта времени
+            this.stopLoadingTimer();
+            
             overlay.style.display = 'none';
             overlay.style.pointerEvents = 'none';
             overlay.style.zIndex = '';
@@ -1193,6 +1255,8 @@ class ClosuresApp {
                             // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
                                 hasRecentCommit = true;
+                                // Сохраняем время коммита для отсчёта в табличке
+                                this.lastCommitTime = lastCommit.commit.committer.date;
                                 // Форматируем время коммита в локальный часовой пояс для отображения
                                 const formattedDate = commitDate.toLocaleString('ru-RU', {
                                     year: 'numeric',
@@ -1204,6 +1268,9 @@ class ClosuresApp {
                                     timeZoneName: 'short'
                                 });
                                 console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message} | Время коммита: ${formattedDate}`);
+                            } else {
+                                // Коммит слишком старый, очищаем время
+                                this.lastCommitTime = null;
                             }
                         }
                     }
@@ -1250,6 +1317,8 @@ class ClosuresApp {
                             // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
                                 hasRecentCommit = true;
+                                // Сохраняем время коммита для отсчёта в табличке
+                                this.lastCommitTime = lastCommit.commit.committer.date;
                                 // Форматируем время коммита в локальный часовой пояс для отображения
                                 const formattedDate = commitDate.toLocaleString('ru-RU', {
                                     year: 'numeric',
@@ -1261,6 +1330,9 @@ class ClosuresApp {
                                     timeZoneName: 'short'
                                 });
                                 console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message} | Время коммита: ${formattedDate}`);
+                            } else {
+                                // Коммит слишком старый, очищаем время
+                                this.lastCommitTime = null;
                             }
                         }
                     } else if (commitsResponse.status === 403 || commitsResponse.status === 401) {
@@ -1324,6 +1396,11 @@ class ClosuresApp {
                 }
             }
             
+            // Если коммит не найден или слишком старый, очищаем время
+            if (!hasRecentCommit && !hasUpdatingFile) {
+                this.lastCommitTime = null;
+            }
+            
             // Если есть файл updating.json или недавний коммит - показываем табличку
             const shouldShowOverlay = hasUpdatingFile || hasRecentCommit;
             
@@ -1342,11 +1419,27 @@ class ClosuresApp {
                     if (shouldShowOverlay && !isCurrentlyVisible) {
                         // Нужно показать оверлей
                         console.log('📢 Показываю табличку загрузки');
-                        this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                        // Получаем время коммита для отсчёта
+                        let commitTimeForTimer = null;
+                        if (hasRecentCommit) {
+                            // Пробуем получить время коммита из последней проверки
+                            // Если коммит был найден, используем его время
+                            commitTimeForTimer = this.lastCommitTime || null;
+                        }
+                        this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен', commitTimeForTimer);
                     } else if (!shouldShowOverlay && isCurrentlyVisible) {
                         // Нужно скрыть оверлей
                         console.log('📢 Скрываю табличку загрузки');
                         this.hideLoadingOverlay();
+                    } else if (shouldShowOverlay && isCurrentlyVisible) {
+                        // Табличка уже показывается, обновляем время коммита если оно изменилось
+                        if (hasRecentCommit && this.lastCommitTime) {
+                            const newCommitTime = new Date(this.lastCommitTime);
+                            if (!this.commitStartTime || Math.abs(newCommitTime.getTime() - this.commitStartTime.getTime()) > 1000) {
+                                this.commitStartTime = newCommitTime;
+                            }
+                        }
+                        console.log(`🔍 Табличка уже показывается: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
                     } else {
                         console.log(`🔍 Табличка уже в правильном состоянии: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
                     }
