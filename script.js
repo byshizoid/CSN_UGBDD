@@ -93,6 +93,9 @@ class ClosuresApp {
         this.currentEscortId = null; // ID текущего сопровождения
         this.currentEscortName = null; // Название текущего сопровождения
         
+        // Проверка активного коммита для всех пользователей
+        this.updateCheckInterval = null;
+        
         this.init();
     }
 
@@ -105,6 +108,10 @@ class ClosuresApp {
         });
         this.setupEventListeners();
         this.loadSavedData();
+        
+        // Запускаем проверку активного коммита для всех пользователей
+        this.startUpdateStatusChecker();
+        
         console.log('✅ Инициализация завершена');
     }
 
@@ -902,6 +909,181 @@ class ClosuresApp {
         }
     }
 
+    /**
+     * Проверяет наличие активного коммита на GitHub
+     * Читает файл updating.json с GitHub Pages (через fetch)
+     * Если файл существует и isUpdating: true - показывает табличку
+     * Если файл не существует - скрывает табличку
+     */
+    async checkUpdateStatus() {
+        try {
+            // Читаем файл updating.json с GitHub (через GitHub Pages)
+            const response = await fetch('updating.json?t=' + Date.now());
+            if (response.ok) {
+                const status = await response.json();
+                if (status.isUpdating) {
+                    // Файл существует и коммит активен - показываем табличку всем пользователям
+                    // Для администратора не показываем, так как у него свой оверлей во время сохранения
+                    if (!this.isAdminMode) {
+                        const overlay = document.getElementById('loadingOverlay');
+                        if (overlay && overlay.style.display === 'none') {
+                            this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                        }
+                    }
+                    return true;
+                }
+            }
+            // Файл не существует (404) - коммит завершен, скрываем индикатор для обычных пользователей
+            if (!this.isAdminMode) {
+                this.hideLoadingOverlay();
+            }
+        } catch (e) {
+            // Файл не существует (404) или ошибка - коммит завершен или не идет, скрываем индикатор
+            if (!this.isAdminMode) {
+                this.hideLoadingOverlay();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Запускает периодическую проверку статуса обновления
+     */
+    startUpdateStatusChecker() {
+        // Проверяем сразу при загрузке
+        this.checkUpdateStatus();
+        
+        // Проверяем каждые 2 секунды
+        this.updateCheckInterval = setInterval(() => {
+            this.checkUpdateStatus();
+        }, 2000);
+    }
+
+    /**
+     * Останавливает проверку статуса обновления
+     */
+    stopUpdateStatusChecker() {
+        if (this.updateCheckInterval) {
+            clearInterval(this.updateCheckInterval);
+            this.updateCheckInterval = null;
+        }
+    }
+
+    /**
+     * Создает файл статуса обновления в GitHub
+     */
+    async createUpdateStatusFile() {
+        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            return;
+        }
+
+        try {
+            const statusData = JSON.stringify({ 
+                isUpdating: true, 
+                timestamp: Date.now(),
+                message: 'Идёт обновление данных на сервере'
+            }, null, 2);
+            const content = btoa(unescape(encodeURIComponent(statusData)));
+            
+            // Проверяем, существует ли файл
+            let sha = null;
+            try {
+                const getResponse = await fetch(
+                    `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/updating.json`,
+                    {
+                        headers: {
+                            'Authorization': `token ${this.githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    }
+                );
+                if (getResponse.ok) {
+                    const fileData = await getResponse.json();
+                    sha = fileData.sha;
+                }
+            } catch (e) {
+                // Файл не существует, создадим новый
+            }
+
+            const response = await fetch(
+                `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/updating.json`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${this.githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Обновление данных - начало',
+                        content: content,
+                        sha: sha
+                    })
+                }
+            );
+            
+            if (response.ok) {
+                console.log('✅ Создан файл статуса обновления');
+            } else {
+                console.warn('⚠️ Не удалось создать файл статуса обновления');
+            }
+        } catch (e) {
+            console.warn('⚠️ Ошибка создания файла статуса обновления:', e);
+        }
+    }
+
+    /**
+     * Удаляет файл статуса обновления из GitHub
+     */
+    async deleteUpdateStatusFile() {
+        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            return;
+        }
+
+        try {
+            // Получаем SHA файла
+            const getResponse = await fetch(
+                `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/updating.json`,
+                {
+                    headers: {
+                        'Authorization': `token ${this.githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+
+            if (getResponse.ok) {
+                const fileData = await getResponse.json();
+                const sha = fileData.sha;
+
+                // Удаляем файл
+                const deleteResponse = await fetch(
+                    `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/updating.json`,
+                    {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `token ${this.githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: 'Обновление данных - завершено',
+                            sha: sha
+                        })
+                    }
+                );
+                
+                if (deleteResponse.ok) {
+                    console.log('✅ Удален файл статуса обновления');
+                } else {
+                    console.warn('⚠️ Не удалось удалить файл статуса обновления');
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Ошибка удаления файла статуса обновления:', e);
+        }
+    }
+
     async saveAndSwitchMode() {
         console.log('💾 saveAndSwitchMode вызвана');
         console.log('🔍 isAdminMode:', this.isAdminMode);
@@ -968,6 +1150,9 @@ class ClosuresApp {
         this.showLoadingOverlay('Подготовка данных...');
 
         try {
+            // Создаем файл статуса обновления для всех пользователей (показываем что идет коммит)
+            await this.createUpdateStatusFile();
+            
             // Сохраняем данные
             this.closures = closures;
             
@@ -992,12 +1177,17 @@ class ClosuresApp {
                 
                 const filesCount = dataToSave.closures.reduce((sum, c) => sum + (c.photos ? c.photos.length : 0), 0) + (dataToSave.mapImage ? 1 : 0);
                 
+                // Удаляем файл статуса обновления (коммит завершен)
+                await this.deleteUpdateStatusFile();
+                
                 // Скрываем оверлей перед показом сообщения
                 this.hideLoadingOverlay();
                 
                 alert(`✅ Данные успешно сохранены в GitHub!\n\nСохранено:\n- Карта: ${dataToSave.mapImage ? 'Да' : 'Нет'}\n- Фото перекрытий: ${filesCount}\n- Все файлы в папке: photos/\n\nТеперь они доступны всем пользователям.`);
             } catch (e) {
                 console.error('❌ Ошибка сохранения в GitHub:', e);
+                // Удаляем файл статуса даже при ошибке
+                await this.deleteUpdateStatusFile();
                 this.hideLoadingOverlay();
                 alert('⚠️ Данные сохранены локально, но не удалось сохранить в GitHub:\n' + e.message + '\n\nПроверьте настройки GitHub и убедитесь, что папка photos/ существует в репозитории.');
             }
@@ -1007,6 +1197,8 @@ class ClosuresApp {
             this.switchToViewMode();
         } catch (e) {
             console.error('❌ Общая ошибка при сохранении:', e);
+            // Удаляем файл статуса при общей ошибке
+            await this.deleteUpdateStatusFile();
             this.hideLoadingOverlay();
             alert('Ошибка при сохранении данных: ' + e.message);
         }
