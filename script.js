@@ -1002,16 +1002,53 @@ class ClosuresApp {
 
     /**
      * Проверяет наличие активного коммита на GitHub
-     * Читает файл updating.json с GitHub Pages (через fetch)
+     * Читает файл updating.json через GitHub API (мгновенное обновление)
      * Если файл существует и isUpdating: true - показывает табличку
      * Если файл не существует - скрывает табличку
      */
     async checkUpdateStatus() {
         try {
-            // Читаем файл updating.json с GitHub (через GitHub Pages)
-            const response = await fetch('updating.json?t=' + Date.now());
+            // Определяем owner и repo из текущего URL или пробуем загрузить из data.json
+            let owner = 'byshizoid';
+            let repo = 'CSN_UGBDD';
+            
+            // Пытаемся получить из URL GitHub Pages
+            const urlMatch = window.location.href.match(/github\.io\/([^\/]+)\/([^\/]+)/);
+            if (urlMatch) {
+                owner = urlMatch[1];
+                repo = urlMatch[2];
+            } else {
+                // Если не удалось из URL, пробуем из localStorage (если есть настройки)
+                const savedOwner = localStorage.getItem('github_owner');
+                const savedRepo = localStorage.getItem('github_repo');
+                if (savedOwner && savedRepo) {
+                    owner = savedOwner;
+                    repo = savedRepo;
+                }
+            }
+            
+            // Читаем файл updating.json через GitHub API (мгновенное обновление, без кеша GitHub Pages)
+            // Для публичных репозиториев токен не нужен, но можно использовать
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/updating.json?t=${Date.now()}`;
+            const headers = {
+                'Accept': 'application/vnd.github.v3+json',
+                'Cache-Control': 'no-cache'
+            };
+            
+            // Если есть токен, используем его (для приватных репозиториев или увеличения rate limit)
+            const token = localStorage.getItem('github_token');
+            if (token) {
+                headers['Authorization'] = `token ${token}`;
+            }
+            
+            const response = await fetch(apiUrl, { headers });
+            
             if (response.ok) {
-                const status = await response.json();
+                const fileData = await response.json();
+                // Декодируем base64 содержимое
+                const content = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
+                const status = JSON.parse(content);
+                
                 if (status.isUpdating) {
                     // Файл существует и коммит активен - показываем табличку всем пользователям
                     // Для администратора не показываем, так как у него свой оверлей во время сохранения
@@ -1032,7 +1069,6 @@ class ClosuresApp {
                 if (!this.isAdminMode) {
                     const overlay = document.getElementById('loadingOverlay');
                     if (overlay && window.getComputedStyle(overlay).display !== 'none') {
-                        console.log('🔓 Коммит завершен - разблокируем интерфейс');
                         this.hideLoadingOverlay();
                     }
                 }
