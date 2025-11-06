@@ -1074,7 +1074,16 @@ class ClosuresApp {
      * Создает файл статуса обновления в GitHub
      */
     async createUpdateStatusFile() {
+        console.log('🔧 createUpdateStatusFile вызвана');
+        console.log('📋 GitHub конфиг:', {
+            owner: this.githubConfig.owner,
+            repo: this.githubConfig.repo,
+            hasToken: !!this.githubConfig.token
+        });
+        
         if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            console.error('❌ Настройки GitHub не заполнены!');
+            console.error('⚠️ Файл updating.json не будет создан');
             return;
         }
 
@@ -1085,6 +1094,8 @@ class ClosuresApp {
                 message: 'Идёт обновление данных на сервере'
             }, null, 2);
             const content = btoa(unescape(encodeURIComponent(statusData)));
+            
+            console.log('📤 Создаю файл updating.json в GitHub...');
             
             // Проверяем, существует ли файл
             let sha = null;
@@ -1101,9 +1112,12 @@ class ClosuresApp {
                 if (getResponse.ok) {
                     const fileData = await getResponse.json();
                     sha = fileData.sha;
+                    console.log('ℹ️ Файл updating.json уже существует, обновляю...');
+                } else {
+                    console.log('ℹ️ Файл updating.json не существует, создаю новый...');
                 }
             } catch (e) {
-                // Файл не существует, создадим новый
+                console.log('ℹ️ Файл updating.json не существует, создаю новый...');
             }
 
             const response = await fetch(
@@ -1124,12 +1138,26 @@ class ClosuresApp {
             );
             
             if (response.ok) {
-                console.log('✅ Создан файл статуса обновления');
+                const result = await response.json();
+                console.log('✅ Файл updating.json успешно создан в GitHub:', result.commit.html_url);
             } else {
-                console.warn('⚠️ Не удалось создать файл статуса обновления');
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch (e) {
+                    errorData = { message: errorText };
+                }
+                console.error('❌ Ошибка создания файла updating.json:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData
+                });
+                throw new Error(errorData.message || `Ошибка создания: ${response.status} ${response.statusText}`);
             }
         } catch (e) {
-            console.warn('⚠️ Ошибка создания файла статуса обновления:', e);
+            console.error('❌ Ошибка создания файла статуса обновления:', e);
+            throw e; // Пробрасываем ошибку, чтобы увидеть её в saveAndSwitchMode
         }
     }
 
@@ -1252,7 +1280,12 @@ class ClosuresApp {
 
         try {
             // Создаем файл статуса обновления для всех пользователей (показываем что идет коммит)
-            await this.createUpdateStatusFile();
+            try {
+                await this.createUpdateStatusFile();
+            } catch (e) {
+                console.error('⚠️ Не удалось создать файл updating.json, продолжаем сохранение:', e);
+                // Продолжаем даже если не удалось создать файл статуса
+            }
             
             // Сохраняем данные
             this.closures = closures;
