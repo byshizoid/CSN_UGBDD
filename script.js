@@ -65,8 +65,9 @@ class ClosuresApp {
         this.currentClosure = null;
         this.currentPhotoIndex = 0;
         this.currentEditingClosureNumber = null;
-        // Пароль администратора (можно изменить)
-        this.adminPassword = 'admin123';
+        // Пароль администратора (хранится локально, не в коде)
+        // Если пароль не установлен, нужно установить его при первом входе
+        this.adminPassword = localStorage.getItem('admin_password');
         // Настройки GitHub (загружаются из localStorage)
         this.githubConfig = {
             owner: localStorage.getItem('github_owner') || '',
@@ -214,9 +215,52 @@ class ClosuresApp {
     }
 
     requestAdminAccess() {
-        const password = prompt('Введите пароль администратора:');
-        if (password === this.adminPassword) {
-            this.isAdminMode = true;
+        // Проверяем, есть ли GitHub токен (это и есть пароль администратора)
+        if (!this.githubConfig.token) {
+            alert('Для доступа к режиму администратора нужен GitHub Personal Access Token.\n\nУкажите токен в настройках GitHub.');
+            // Показываем форму настройки
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('adminAccess').style.display = 'none';
+            return;
+        }
+        
+        // Проверяем токен, пытаясь получить информацию о репозитории
+        this.verifyGitHubToken().then((isValid) => {
+            if (isValid) {
+                this.isAdminMode = true;
+                this.enableAdminMode();
+            } else {
+                alert('Неверный GitHub токен! Проверьте токен в настройках.');
+            }
+        }).catch((error) => {
+            alert('Ошибка проверки токена: ' + error.message);
+        });
+    }
+
+    async verifyGitHubToken() {
+        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            return false;
+        }
+
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}`,
+                {
+                    headers: {
+                        'Authorization': `token ${this.githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+            
+            return response.ok;
+        } catch (e) {
+            console.error('Ошибка проверки токена:', e);
+            return false;
+        }
+    }
+
+    enableAdminMode() {
             document.getElementById('setupSection').style.display = 'block';
             document.getElementById('adminAccess').style.display = 'none';
             document.getElementById('headerDescription').textContent = 'Режим администратора - загрузка данных';
@@ -236,6 +280,7 @@ class ClosuresApp {
             alert('Неверный пароль!');
         }
     }
+
 
     setupAutoSave() {
         // Автосохранение при изменении названий перекрытий
@@ -367,7 +412,7 @@ class ClosuresApp {
         }
     }
 
-    saveGitHubConfig() {
+    async saveGitHubConfig() {
         const owner = document.getElementById('repoOwner').value.trim();
         const repo = document.getElementById('repoName').value.trim();
         const token = document.getElementById('githubToken').value.trim();
@@ -377,25 +422,49 @@ class ClosuresApp {
             return;
         }
         
-        this.githubConfig = { owner, repo, token };
-        localStorage.setItem('github_owner', owner);
-        localStorage.setItem('github_repo', repo);
-        localStorage.setItem('github_token', token);
-        
-        console.log('✅ Настройки GitHub сохранены:', {
-            owner: owner,
-            repo: repo,
-            token: token ? '✅ (установлен)' : '❌'
-        });
-        
-        // Включаем автосохранение если в режиме администратора
-        if (this.isAdminMode) {
+        // Проверяем токен перед сохранением
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}`,
+                {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                alert('Неверный токен или нет доступа к репозиторию!\n\nПроверьте:\n- Правильность токена\n- Права доступа к репозиторию\n- Название репозитория');
+                return;
+            }
+            
+            // Токен валидный, сохраняем
+            this.githubConfig = { owner, repo, token };
+            localStorage.setItem('github_owner', owner);
+            localStorage.setItem('github_repo', repo);
+            localStorage.setItem('github_token', token);
+            
+            console.log('✅ Настройки GitHub сохранены:', {
+                owner: owner,
+                repo: repo,
+                token: token ? '✅ (установлен)' : '❌'
+            });
+            
+            // Автоматически включаем режим администратора
+            this.isAdminMode = true;
+            this.enableAdminMode();
+            
+            // Включаем автосохранение
             this.autoSaveEnabled = true;
             this.setupAutoSave();
-            console.log('✅ Автосохранение включено');
+            document.getElementById('autoSaveStatus').style.display = 'block';
+            
+            alert('✅ Настройки сохранены! Режим администратора включен.');
+        } catch (error) {
+            console.error('Ошибка проверки токена:', error);
+            alert('Ошибка проверки токена: ' + error.message);
         }
-        
-        alert('Настройки GitHub сохранены! Автосохранение включено.');
     }
 
     handleMapUpload(file) {
