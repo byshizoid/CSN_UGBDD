@@ -2095,6 +2095,146 @@ class ClosuresApp {
             alert('Ошибка загрузки сопровождения: ' + e.message);
         }
     }
+
+    startEditingEscortName() {
+        const escortNameInput = document.getElementById('escortNameInput');
+        const escortNameDisplay = document.querySelector('.escort-name-display');
+        const editEscortNameForm = document.getElementById('editEscortNameForm');
+        
+        if (escortNameInput && escortNameDisplay && editEscortNameForm) {
+            escortNameInput.value = this.currentEscortName || '';
+            escortNameDisplay.style.display = 'none';
+            editEscortNameForm.style.display = 'block';
+            escortNameInput.focus();
+            escortNameInput.select();
+        }
+    }
+
+    cancelEditingEscortName() {
+        const escortNameDisplay = document.querySelector('.escort-name-display');
+        const editEscortNameForm = document.getElementById('editEscortNameForm');
+        
+        if (escortNameDisplay && editEscortNameForm) {
+            editEscortNameForm.style.display = 'none';
+            escortNameDisplay.style.display = 'flex';
+        }
+    }
+
+    async saveEscortName() {
+        const escortNameInput = document.getElementById('escortNameInput');
+        if (!escortNameInput) return;
+        
+        const newName = escortNameInput.value.trim();
+        if (!newName) {
+            alert('Название не может быть пустым!');
+            return;
+        }
+        
+        if (newName === this.currentEscortName) {
+            // Название не изменилось, просто закрываем форму
+            this.cancelEditingEscortName();
+            return;
+        }
+        
+        // Обновляем название в текущем сопровождении
+        const escort = this.escorts.find(e => e.id === this.currentEscortId);
+        if (escort) {
+            escort.name = newName;
+            this.currentEscortName = newName;
+        }
+        
+        // Обновляем отображение
+        const currentEscortNameText = document.getElementById('currentEscortNameText');
+        if (currentEscortNameText) {
+            currentEscortNameText.textContent = newName;
+        }
+        
+        // Обновляем селекторы
+        this.updateEscortSelectors();
+        
+        // Сохраняем в GitHub, если есть настройки
+        if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
+            try {
+                // Загружаем текущие данные
+                const response = await fetch('data.json?t=' + Date.now());
+                let allEscortsData = {};
+                let defaultEscortId = this.currentEscortId || 'default';
+                
+                if (response.ok) {
+                    const existingData = await response.json();
+                    if (existingData.escorts) {
+                        allEscortsData = existingData.escorts;
+                        defaultEscortId = existingData.defaultEscort || this.currentEscortId || defaultEscortId;
+                    }
+                }
+                
+                // Обновляем название сопровождения
+                if (allEscortsData[this.currentEscortId]) {
+                    allEscortsData[this.currentEscortId].name = newName;
+                }
+                
+                // Сохраняем в GitHub
+                const jsonData = JSON.stringify({
+                    escorts: allEscortsData,
+                    defaultEscort: defaultEscortId
+                }, null, 2);
+                
+                let sha = null;
+                try {
+                    const getResponse = await fetch(
+                        `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
+                        {
+                            headers: {
+                                'Authorization': `token ${this.githubConfig.token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        }
+                    );
+                    
+                    if (getResponse.ok) {
+                        const fileData = await getResponse.json();
+                        sha = fileData.sha;
+                    }
+                } catch (e) {
+                    console.log('Файл не существует, будет создан новый');
+                }
+                
+                const content = btoa(unescape(encodeURIComponent(jsonData)));
+                
+                const saveResponse = await fetch(
+                    `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${this.githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Изменение названия сопровождения: ${newName}`,
+                            content: content,
+                            sha: sha
+                        })
+                    }
+                );
+                
+                if (saveResponse.ok) {
+                    console.log('✅ Название сопровождения сохранено в GitHub');
+                    alert(`✅ Название сопровождения изменено на "${newName}" и сохранено в GitHub!`);
+                } else {
+                    throw new Error('Ошибка сохранения в GitHub');
+                }
+            } catch (e) {
+                console.error('Ошибка сохранения названия:', e);
+                alert('⚠️ Название изменено локально, но не удалось сохранить в GitHub: ' + e.message);
+            }
+        } else {
+            alert(`✅ Название сопровождения изменено на "${newName}". Для сохранения в GitHub укажите настройки GitHub.`);
+        }
+        
+        // Закрываем форму редактирования
+        this.cancelEditingEscortName();
+    }
 }
 
 // Инициализация приложения
