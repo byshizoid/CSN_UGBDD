@@ -331,7 +331,6 @@ class ClosuresApp {
                     }
                 }
             );
-            
             return response.ok;
         } catch (e) {
             console.error('Ошибка проверки токена:', e);
