@@ -3,128 +3,128 @@
     "default": {
       "id": "default",
       "name": "КРЕМЛЬ - ВС РФ",
-      "mapImage": "photos/map_1762408850284.png",
+      "mapImage": "photos/map_1762412272139.png",
       "closures": [
         {
           "number": 1,
           "name": "Перекрытие 1",
           "photos": [
-            "photos/closure_1_1_1762408850289.jpg",
-            "photos/closure_1_2_1762408850295.jpg"
+            "photos/closure_1_1_1762412272143.jpg",
+            "photos/closure_1_2_1762412272149.jpg"
           ]
         },
         {
           "number": 2,
           "name": "Перекрытие 2",
           "photos": [
-            "photos/closure_2_1_1762408850301.jpg"
+            "photos/closure_2_1_1762412272154.jpg"
           ]
         },
         {
           "number": 3,
           "name": "Перекрытие 3",
           "photos": [
-            "photos/closure_3_1_1762408850308.jpg",
-            "photos/closure_3_2_1762408850315.jpg"
+            "photos/closure_3_1_1762412272159.jpg",
+            "photos/closure_3_2_1762412272165.jpg"
           ]
         },
         {
           "number": 4,
           "name": "Перекрытие 4",
           "photos": [
-            "photos/closure_4_1_1762408850322.jpg",
-            "photos/closure_4_2_1762408850329.jpg"
+            "photos/closure_4_1_1762412272170.jpg",
+            "photos/closure_4_2_1762412272177.jpg"
           ]
         },
         {
           "number": 5,
           "name": "Перекрытие 5",
           "photos": [
-            "photos/closure_5_1_1762408850335.jpg",
-            "photos/closure_5_2_1762408850342.jpg"
+            "photos/closure_5_1_1762412272191.jpg",
+            "photos/closure_5_2_1762412272196.jpg"
           ]
         },
         {
           "number": 6,
           "name": "Перекрытие 6",
           "photos": [
-            "photos/closure_6_1_1762408850349.jpg",
-            "photos/closure_6_2_1762408850354.jpg"
+            "photos/closure_6_1_1762412272201.jpg",
+            "photos/closure_6_2_1762412272206.jpg"
           ]
         },
         {
           "number": 7,
           "name": "Перекрытие 7",
           "photos": [
-            "photos/closure_7_1_1762408850360.jpg"
+            "photos/closure_7_1_1762412272211.jpg"
           ]
         },
         {
           "number": 8,
           "name": "Перекрытие 8",
           "photos": [
-            "photos/closure_8_1_1762408850366.jpg",
-            "photos/closure_8_2_1762408850372.jpg",
-            "photos/closure_8_3_1762408850377.jpg"
+            "photos/closure_8_1_1762412272217.jpg",
+            "photos/closure_8_2_1762412272222.jpg",
+            "photos/closure_8_3_1762412272227.jpg"
           ]
         },
         {
           "number": 9,
           "name": "Перекрытие 9",
           "photos": [
-            "photos/closure_9_1_1762408850383.jpg"
+            "photos/closure_9_1_1762412272232.jpg"
           ]
         },
         {
           "number": 10,
           "name": "Перекрытие 10",
           "photos": [
-            "photos/closure_10_1_1762408850388.jpg"
+            "photos/closure_10_1_1762412272237.jpg"
           ]
         },
         {
           "number": 11,
           "name": "Перекрытие 11",
           "photos": [
-            "photos/closure_11_1_1762408850394.jpg"
+            "photos/closure_11_1_1762412272243.jpg"
           ]
         },
         {
           "number": 12,
           "name": "Перекрытие 12",
           "photos": [
-            "photos/closure_12_1_1762408850399.jpg",
-            "photos/closure_12_2_1762408850404.jpg",
-            "photos/closure_12_3_1762408850411.jpg",
-            "photos/closure_12_4_1762408850417.jpg"
+            "photos/closure_12_1_1762412272247.jpg",
+            "photos/closure_12_2_1762412272253.jpg",
+            "photos/closure_12_3_1762412272258.jpg",
+            "photos/closure_12_4_1762412272264.jpg"
           ]
         },
         {
           "number": 13,
           "name": "!!ГОРА!!",
           "photos": [
-            "photos/closure_13_1_1762408850424.jpg"
+            "photos/closure_13_1_1762412272270.jpg"
           ]
         },
         {
           "number": 14,
           "name": "Перекрытие 13",
           "photos": [
-            "photos/closure_14_1_1762408850430.jpg"
+            "photos/closure_14_1_1762412272276.jpg"
           ]
         },
         {
           "number": 15,
           "name": "Перекрытие 14",
           "photos": [
-            "photos/closure_15_1_1762408850436.jpg"
+            "photos/closure_15_1_1762412272280.jpg"
           ]
         },
         {
           "number": 16,
           "name": "Перекрытие 15",
           "photos": [
-            "photos/closure_16_1_1762408850443.jpg"
+            "photos/closure_16_1_1762412272285.jpg"
           ]
         }
       ]
@@ -144,5 +144,5 @@
       ]
     }
   },
-  "defaultEscort": "escort_1762405641577"
+  "defaultEscort": "default"
 }
