@@ -41,8 +41,30 @@ if errorlevel 1 (
 )
 echo.
 
+REM Получаем изменения с GitHub (если есть)
+echo [Шаг 3/4] Получаю изменения с GitHub...
+git fetch origin
+if errorlevel 1 (
+    echo [ПРЕДУПРЕЖДЕНИЕ] Не удалось получить изменения с GitHub
+    echo.
+)
+
+REM Проверяем, есть ли удаленные изменения
+git status | findstr "Your branch and" >nul 2>&1
+if errorlevel 0 (
+    echo [INFO] Обнаружены изменения на GitHub, синхронизирую...
+    git pull origin %CURRENT_BRANCH% --no-rebase
+    if errorlevel 1 (
+        echo [ПРЕДУПРЕЖДЕНИЕ] Конфликты при слиянии. Попробуйте решить вручную.
+        echo.
+    ) else (
+        echo [OK] Изменения синхронизированы
+        echo.
+    )
+)
+
 REM Отправляем в GitHub
-echo [Шаг 3/3] Отправляю в GitHub...
+echo [Шаг 4/4] Отправляю в GitHub...
 git push origin %CURRENT_BRANCH%
 if errorlevel 1 (
     echo [ОШИБКА] Не удалось отправить в GitHub!
@@ -50,10 +72,14 @@ if errorlevel 1 (
     echo Возможные причины:
     echo - Токен не настроен или истек
     echo - Нет подключения к интернету
-    echo - Ветка не настроена
+    echo - Конфликты при слиянии
     echo.
-    echo Попробуйте:
-    echo   git push -u origin %CURRENT_BRANCH%
+    echo Попробуйте вручную:
+    echo   git pull origin %CURRENT_BRANCH%
+    echo   git push origin %CURRENT_BRANCH%
+    echo.
+    echo Или если нужно принудительно (осторожно!):
+    echo   git push origin %CURRENT_BRANCH% --force
     echo.
     pause
     exit /b 1
