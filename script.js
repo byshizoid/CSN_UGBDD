@@ -1058,6 +1058,7 @@ class ClosuresApp {
             }
             
             // Проверяем файл updating.json через raw.githubusercontent.com (быстрее чем GitHub Pages)
+            // ВАЖНО: Не добавляем кастомные заголовки, чтобы избежать CORS preflight
             let hasUpdatingFile = false;
             try {
                 // Используем уникальный timestamp для обхода кеша
@@ -1065,11 +1066,8 @@ class ClosuresApp {
                 const updatingResponse = await fetch(
                     `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${cacheBuster}`,
                     { 
-                        cache: 'no-store',
-                        headers: {
-                            'Cache-Control': 'no-cache, no-store, must-revalidate',
-                            'Pragma': 'no-cache'
-                        }
+                        cache: 'no-store'
+                        // Не добавляем кастомные заголовки - они вызывают CORS preflight
                     }
                 );
                 
