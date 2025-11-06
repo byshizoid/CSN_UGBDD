@@ -1026,29 +1026,16 @@ class ClosuresApp {
                 }
             }
             
-            const headers = {
-                'Accept': 'application/vnd.github.v3+json',
-                'Cache-Control': 'no-cache'
-            };
-            
-            // Если есть токен, используем его (для приватных репозиториев или увеличения rate limit)
-            const token = localStorage.getItem('github_token');
-            if (token) {
-                headers['Authorization'] = `token ${token}`;
-            }
-            
-            // Сначала проверяем файл updating.json
+            // Проверяем файл updating.json через raw.githubusercontent.com (быстрее чем GitHub Pages)
             let hasUpdatingFile = false;
             try {
                 const updatingResponse = await fetch(
-                    `https://api.github.com/repos/${owner}/${repo}/contents/updating.json?t=${Date.now()}`,
-                    { headers }
+                    `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${Date.now()}`,
+                    { cache: 'no-store' }
                 );
                 
                 if (updatingResponse.ok) {
-                    const fileData = await updatingResponse.json();
-                    const content = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
-                    const status = JSON.parse(content);
+                    const status = await updatingResponse.json();
                     if (status.isUpdating) {
                         hasUpdatingFile = true;
                     }
@@ -1057,31 +1044,65 @@ class ClosuresApp {
                 // Файл не существует или ошибка - это нормально
             }
             
-            // Проверяем последние коммиты - если последний коммит недавний (менее 3 минут назад), считаем что идет обновление
+            // Проверяем последние коммиты через GitHub API (только если есть токен)
+            // Если токена нет, используем альтернативный метод
             let hasRecentCommit = false;
-            try {
-                const commitsResponse = await fetch(
-                    `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1&t=${Date.now()}`,
-                    { headers }
-                );
-                
-                if (commitsResponse.ok) {
-                    const commits = await commitsResponse.json();
-                    if (commits && commits.length > 0) {
-                        const lastCommit = commits[0];
-                        const commitDate = new Date(lastCommit.commit.committer.date);
-                        const now = new Date();
-                        const diffMinutes = (now - commitDate) / (1000 * 60);
-                        
-                        // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
-                        if (diffMinutes < 3) {
-                            hasRecentCommit = true;
-                            console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message}`);
+            const token = localStorage.getItem('github_token');
+            
+            if (token) {
+                // Если есть токен, используем GitHub API
+                try {
+                    const commitsResponse = await fetch(
+                        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
+                        {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'Authorization': `token ${token}`
+                            }
+                        }
+                    );
+                    
+                    if (commitsResponse.ok) {
+                        const commits = await commitsResponse.json();
+                        if (commits && commits.length > 0) {
+                            const lastCommit = commits[0];
+                            const commitDate = new Date(lastCommit.commit.committer.date);
+                            const now = new Date();
+                            const diffMinutes = (now - commitDate) / (1000 * 60);
+                            
+                            // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
+                            if (diffMinutes < 3) {
+                                hasRecentCommit = true;
+                                console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message}`);
+                            }
                         }
                     }
+                } catch (e) {
+                    // Ошибка при проверке коммитов - игнорируем
                 }
-            } catch (e) {
-                // Ошибка при проверке коммитов - игнорируем
+            } else {
+                // Если нет токена, проверяем через GitHub Pages (медленнее, но работает)
+                // Проверяем data.json - если он недавно обновился, значит был коммит
+                try {
+                    const dataResponse = await fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' });
+                    if (dataResponse.ok) {
+                        // Проверяем заголовок Last-Modified или ETag
+                        const lastModified = dataResponse.headers.get('last-modified');
+                        if (lastModified) {
+                            const lastModifiedDate = new Date(lastModified);
+                            const now = new Date();
+                            const diffMinutes = (now - lastModifiedDate) / (1000 * 60);
+                            
+                            // Если data.json обновлялся менее 3 минут назад, считаем что идет обновление
+                            if (diffMinutes < 3) {
+                                hasRecentCommit = true;
+                                console.log(`🔄 data.json обновлен недавно (${diffMinutes.toFixed(1)} мин назад)`);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Ошибка - игнорируем
+                }
             }
             
             // Если есть файл updating.json или недавний коммит - показываем табличку
