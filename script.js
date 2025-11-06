@@ -259,11 +259,19 @@ class ClosuresApp {
 
         const deleteEscortBtn = document.getElementById('deleteEscortBtn');
         if (deleteEscortBtn) {
-            deleteEscortBtn.addEventListener('click', () => {
+            deleteEscortBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🗑️ Кнопка удаления нажата, currentEscortId:', this.currentEscortId);
                 if (this.currentEscortId) {
                     this.deleteEscort(this.currentEscortId);
+                } else {
+                    alert('Не выбрано сопровождение для удаления!');
                 }
             });
+            console.log('✅ Обработчик кнопки удаления привязан');
+        } else {
+            console.error('❌ Кнопка deleteEscortBtn не найдена!');
         }
 
         const escortSelect = document.getElementById('escortSelect');
@@ -2384,9 +2392,14 @@ class ClosuresApp {
             if (deleteBtn) {
                 if (this.currentEscortId && this.escorts.length > 1) {
                     deleteBtn.style.display = 'inline-block';
+                    deleteBtn.disabled = false;
+                    console.log('✅ Кнопка удаления показана и активна');
                 } else {
                     deleteBtn.style.display = 'none';
+                    console.log('⚠️ Кнопка удаления скрыта (escorts.length:', this.escorts.length, ', currentEscortId:', this.currentEscortId, ')');
                 }
+            } else {
+                console.error('❌ Кнопка deleteEscortBtn не найдена в updateEscortSelectors!');
             }
         } else {
             // Скрываем управление сопровождениями, если не админ
@@ -2450,13 +2463,21 @@ class ClosuresApp {
         }
         
         this.currentEscortId = escortId;
+        this.currentEscortName = escort.name;
         
         // Показываем кнопку удаления
         const deleteBtn = document.getElementById('deleteEscortBtn');
         if (deleteBtn) {
-            deleteBtn.style.display = 'inline-block';
+            if (this.escorts.length > 1) {
+                deleteBtn.style.display = 'inline-block';
+                console.log('✅ Кнопка удаления показана для сопровождения:', escort.name);
+            } else {
+                deleteBtn.style.display = 'none';
+                console.log('⚠️ Кнопка удаления скрыта - это последнее сопровождение');
+            }
+        } else {
+            console.error('❌ Кнопка deleteEscortBtn не найдена!');
         }
-        this.currentEscortName = escort.name;
         
         // Преобразуем пути в base64 для редактирования
         const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
@@ -2768,7 +2789,14 @@ class ClosuresApp {
     }
 
     async deleteEscort(escortId) {
-        if (!this.isAdminMode) return;
+        console.log('🗑️ deleteEscort вызвана для:', escortId);
+        console.log('📋 isAdminMode:', this.isAdminMode);
+        console.log('📋 escorts.length:', this.escorts.length);
+        
+        if (!this.isAdminMode) {
+            alert('Удаление доступно только в режиме администратора!');
+            return;
+        }
         
         // Нельзя удалить последнее сопровождение
         if (this.escorts.length <= 1) {
@@ -2779,9 +2807,13 @@ class ClosuresApp {
         // Находим сопровождение для удаления
         const escort = this.escorts.find(e => e.id === escortId);
         if (!escort) {
+            console.error('❌ Сопровождение не найдено:', escortId);
+            console.error('📋 Доступные сопровождения:', this.escorts.map(e => e.id));
             alert('Сопровождение не найдено!');
             return;
         }
+        
+        console.log('✅ Сопровождение найдено:', escort.name);
         
         // Подтверждение удаления
         const confirmMessage = `Вы уверены, что хотите удалить сопровождение "${escort.name}"?\n\nЭто действие нельзя отменить!`;
