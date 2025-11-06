@@ -39,7 +39,17 @@
                     </select>
                 </div>
                 <div id="currentEscortName" class="current-escort-name" style="display: none;">
-                    <strong>Текущее сопровождение: <span id="currentEscortNameText"></span></strong>
+                    <div class="escort-name-display">
+                        <strong>Текущее сопровождение: <span id="currentEscortNameText"></span></strong>
+                        <button id="editEscortNameBtn" class="btn btn-sm btn-secondary">✏️ Изменить название</button>
+                    </div>
+                    <div id="editEscortNameForm" class="edit-escort-name-form" style="display: none;">
+                        <input type="text" id="escortNameInput" class="escort-name-input" placeholder="Название сопровождения">
+                        <div class="escort-name-buttons">
+                            <button id="saveEscortNameBtn" class="btn btn-sm btn-primary">💾 Сохранить</button>
+                            <button id="cancelEscortNameBtn" class="btn btn-sm btn-secondary">❌ Отмена</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             

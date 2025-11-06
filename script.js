@@ -247,6 +247,28 @@ class ClosuresApp {
             });
         }
 
+        // Редактирование названия сопровождения
+        const editEscortNameBtn = document.getElementById('editEscortNameBtn');
+        if (editEscortNameBtn) {
+            editEscortNameBtn.addEventListener('click', () => {
+                this.startEditingEscortName();
+            });
+        }
+
+        const saveEscortNameBtn = document.getElementById('saveEscortNameBtn');
+        if (saveEscortNameBtn) {
+            saveEscortNameBtn.addEventListener('click', () => {
+                this.saveEscortName();
+            });
+        }
+
+        const cancelEscortNameBtn = document.getElementById('cancelEscortNameBtn');
+        if (cancelEscortNameBtn) {
+            cancelEscortNameBtn.addEventListener('click', () => {
+                this.cancelEditingEscortName();
+            });
+        }
+
         // Навигация по фото
         document.getElementById('prevPhoto').addEventListener('click', () => {
             this.switchPhoto('prev');
@@ -831,6 +853,9 @@ class ClosuresApp {
         }
         viewSection.style.display = 'block';
         
+        // Обновляем селекторы сопровождений
+        this.updateEscortSelectors();
+        
         // Устанавливаем карту
         if (this.mapImage) {
             const mapImage = document.getElementById('mapImage');
@@ -1388,8 +1413,25 @@ class ClosuresApp {
                     });
                     this.mapImage = data.mapImage;
                     
+                    // Если нет сопровождений, создаем одно по умолчанию
+                    if (this.escorts.length === 0) {
+                        this.escorts = [{
+                            id: 'default',
+                            name: 'Сопровождение по умолчанию',
+                            mapImage: data.mapImage,
+                            closures: this.closures
+                        }];
+                        this.currentEscortId = 'default';
+                        this.currentEscortName = 'Сопровождение по умолчанию';
+                        console.log('✅ Создано сопровождение по умолчанию');
+                    }
+                    
                     console.log('✅ Загружено перекрытий:', this.closures.length);
                     console.log('✅ Карта загружена:', !!this.mapImage);
+                    console.log('✅ Сопровождений:', this.escorts.length);
+                    
+                    // Обновляем селекторы после загрузки данных
+                    this.updateEscortSelectors();
                     
                     // Автоматически показываем режим просмотра
                     this.switchToViewMode();
@@ -1499,6 +1541,9 @@ class ClosuresApp {
                     closures: this.closures
                 };
                 await DBHelper.save('closures_data', dataToCache);
+                
+                // Обновляем селекторы после загрузки данных
+                this.updateEscortSelectors();
                 
                 // Автоматически показываем режим просмотра
                 this.switchToViewMode();
@@ -1789,12 +1834,12 @@ class ClosuresApp {
         updateSelect(escortSelect);
         updateSelect(adminEscortSelect);
         
-        // Показываем селектор сопровождений в режиме просмотра
-        if (this.escorts.length > 1) {
-            const escortSelector = document.getElementById('escortSelector');
-            if (escortSelector) {
-                escortSelector.style.display = 'block';
-            }
+        // Показываем селектор сопровождений в режиме просмотра (если есть хотя бы одно сопровождение)
+        const escortSelector = document.getElementById('escortSelector');
+        if (escortSelector && this.escorts.length > 0) {
+            escortSelector.style.display = 'block';
+        } else if (escortSelector) {
+            escortSelector.style.display = 'none';
         }
         
         // Показываем управление сопровождениями в режиме администратора
@@ -1808,10 +1853,21 @@ class ClosuresApp {
             if (this.currentEscortName) {
                 const currentEscortName = document.getElementById('currentEscortName');
                 const currentEscortNameText = document.getElementById('currentEscortNameText');
+                const editEscortNameForm = document.getElementById('editEscortNameForm');
                 if (currentEscortName && currentEscortNameText) {
                     currentEscortNameText.textContent = this.currentEscortName;
                     currentEscortName.style.display = 'block';
+                    // Скрываем форму редактирования, если она была открыта
+                    if (editEscortNameForm) {
+                        editEscortNameForm.style.display = 'none';
+                    }
                 }
+            }
+        } else {
+            // Скрываем управление сопровождениями, если не админ
+            const escortManagement = document.getElementById('escortManagement');
+            if (escortManagement) {
+                escortManagement.style.display = 'none';
             }
         }
     }
