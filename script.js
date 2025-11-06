@@ -895,8 +895,14 @@ class ClosuresApp {
                 messageElement.textContent = message;
             }
             overlay.style.display = 'flex';
+            overlay.style.pointerEvents = 'all';
             // Блокируем прокрутку страницы
             document.body.style.overflow = 'hidden';
+            // Добавляем класс для полной блокировки всех элементов
+            document.body.classList.add('loading-active');
+            // Блокируем все взаимодействия со страницей
+            document.body.style.pointerEvents = 'none';
+            overlay.style.pointerEvents = 'all';
         }
     }
 
@@ -904,8 +910,12 @@ class ClosuresApp {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
             overlay.style.display = 'none';
-            // Восстанавливаем прокрутку страницы
+            overlay.style.pointerEvents = 'none';
+            // Убираем класс блокировки
+            document.body.classList.remove('loading-active');
+            // Восстанавливаем прокрутку страницы и взаимодействия
             document.body.style.overflow = '';
+            document.body.style.pointerEvents = '';
         }
     }
 
@@ -926,19 +936,25 @@ class ClosuresApp {
                     // Для администратора не показываем, так как у него свой оверлей во время сохранения
                     if (!this.isAdminMode) {
                         const overlay = document.getElementById('loadingOverlay');
-                        if (overlay && overlay.style.display === 'none') {
-                            this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                        if (overlay) {
+                            const currentDisplay = window.getComputedStyle(overlay).display;
+                            if (currentDisplay === 'none') {
+                                this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                            }
                         }
                     }
                     return true;
                 }
-            }
-            // Файл не существует (404) - коммит завершен, скрываем индикатор для обычных пользователей
-            if (!this.isAdminMode) {
-                this.hideLoadingOverlay();
+            } else if (response.status === 404) {
+                // Файл не существует (404) - коммит завершен или не идет
+                // Это нормальная ситуация, не логируем как ошибку
+                if (!this.isAdminMode) {
+                    this.hideLoadingOverlay();
+                }
             }
         } catch (e) {
-            // Файл не существует (404) или ошибка - коммит завершен или не идет, скрываем индикатор
+            // Игнорируем ошибки сети (404 - это нормально, файл просто не существует)
+            // Не логируем в консоль, чтобы не спамить
             if (!this.isAdminMode) {
                 this.hideLoadingOverlay();
             }

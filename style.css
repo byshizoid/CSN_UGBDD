@@ -812,12 +812,40 @@ header p {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    z-index: 10000;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 999999;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(10px);
+    pointer-events: all !important;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    touch-action: none;
+    -webkit-touch-callout: none;
+}
+
+/* Блокируем все элементы на странице когда оверлей активен */
+body.loading-active {
+    overflow: hidden !important;
+    pointer-events: none !important;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+body.loading-active * {
+    pointer-events: none !important;
+}
+
+body.loading-active .loading-overlay {
+    pointer-events: all !important;
+}
+
+body.loading-active .loading-overlay * {
+    pointer-events: all !important;
 }
 
 .loading-content {
