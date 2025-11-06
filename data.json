@@ -3,13 +3,13 @@
     "default": {
       "id": "default",
       "name": "КРЕМЛЬ - ВС РФ",
-      "mapImage": "photos/map_1762407151208.png",
+      "mapImage": "photos/map_1762407493634.png",
       "closures": [
         {
           "number": 1,
           "name": "Перекрытие 1",
           "photos": [
-            "photos/closure_1_1_1762407151211.jpg"
+            "photos/closure_1_1_1762407493638.jpg"
           ]
         }
       ]
