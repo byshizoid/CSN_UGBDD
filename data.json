@@ -132,7 +132,7 @@
     "escort_1762405641577": {
       "id": "escort_1762405641577",
       "name": "ВС РФ - КРЕМЛЬ",
-      "mapImage": "photos/map_1762410155898.png",
+      "mapImage": "photos/map_1762410402858.png",
       "closures": [
         {
           "number": 1,
@@ -141,7 +141,37 @@
             "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762409371413.jpg",
             "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_2_1762409549815.jpg",
             "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_3_1762409837835.jpg",
-            "photos/closure_1_4_1762410155904.jpg"
+            "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_4_1762410155904.jpg",
+            "photos/closure_1_5_1762410402865.jpg",
+            "photos/closure_1_6_1762410402870.jpg",
+            "photos/closure_1_7_1762410402875.jpg",
+            "photos/closure_1_8_1762410402881.jpg",
+            "photos/closure_1_9_1762410402889.jpg",
+            "photos/closure_1_10_1762410402896.jpg",
+            "photos/closure_1_11_1762410402901.jpg",
+            "photos/closure_1_12_1762410402907.jpg",
+            "photos/closure_1_13_1762410402913.jpg",
+            "photos/closure_1_14_1762410402918.jpg",
+            "photos/closure_1_15_1762410402924.jpg",
+            "photos/closure_1_16_1762410402931.jpg",
+            "photos/closure_1_17_1762410402938.jpg",
+            "photos/closure_1_18_1762410402944.jpg",
+            "photos/closure_1_19_1762410402949.jpg",
+            "photos/closure_1_20_1762410402954.jpg",
+            "photos/closure_1_21_1762410402960.jpg",
+            "photos/closure_1_22_1762410402966.jpg",
+            "photos/closure_1_23_1762410402971.jpg",
+            "photos/closure_1_24_1762410402976.jpg",
+            "photos/closure_1_25_1762410402981.jpg",
+            "photos/closure_1_26_1762410402986.jpg",
+            "photos/closure_1_27_1762410402992.jpg",
+            "photos/closure_1_28_1762410402997.jpg",
+            "photos/closure_1_29_1762410403002.jpg",
+            "photos/closure_1_30_1762410403007.jpg",
+            "photos/closure_1_31_1762410403012.jpg",
+            "photos/closure_1_32_1762410403017.jpg",
+            "photos/closure_1_33_1762410403021.jpg",
+            "photos/closure_1_34_1762410403027.jpg"
           ]
         }
       ]
