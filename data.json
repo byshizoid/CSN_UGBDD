@@ -1,126 +1,126 @@
 {
-  "mapImage": "photos/map_1762404012708.png",
+  "mapImage": "photos/map_1762405555153.png",
   "closures": [
     {
       "number": 1,
       "name": "Перекрытие 1",
       "photos": [
-        "photos/closure_1_1_1762404012715.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762404012715.jpg"
       ]
     },
     {
       "number": 2,
       "name": "Перекрытие 2",
       "photos": [
-        "photos/closure_2_1_1762404012731.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_2_1_1762404012731.jpg"
       ]
     },
     {
       "number": 3,
       "name": "Перекрытие 3",
       "photos": [
-        "photos/closure_3_1_1762404012740.jpg",
-        "photos/closure_3_2_1762404012751.jpg",
-        "photos/closure_3_3_1762404012761.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_3_1_1762404012740.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_3_2_1762404012751.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_3_3_1762404012761.jpg"
       ]
     },
     {
       "number": 4,
       "name": "Перекрытие 4",
       "photos": [
-        "photos/closure_4_1_1762404012773.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_4_1_1762404012773.jpg"
       ]
     },
     {
       "number": 5,
       "name": "Перекрытие 5",
       "photos": [
-        "photos/closure_5_1_1762404012788.jpg",
-        "photos/closure_5_2_1762404012797.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_5_1_1762404012788.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_5_2_1762404012797.jpg"
       ]
     },
     {
       "number": 6,
       "name": "Перекрытие 6",
       "photos": [
-        "photos/closure_6_1_1762404012805.jpg",
-        "photos/closure_6_2_1762404012812.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_6_1_1762404012805.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_6_2_1762404012812.jpg"
       ]
     },
     {
       "number": 7,
       "name": "Перекрытие 7",
       "photos": [
-        "photos/closure_7_1_1762404012817.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_7_1_1762404012817.jpg"
       ]
     },
     {
       "number": 8,
       "name": "Перекрытие 8",
       "photos": [
-        "photos/closure_8_1_1762404012824.jpg",
-        "photos/closure_8_2_1762404012829.jpg",
-        "photos/closure_8_3_1762404012834.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_8_1_1762404012824.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_8_2_1762404012829.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_8_3_1762404012834.jpg"
       ]
     },
     {
       "number": 9,
       "name": "Перекрытие 9",
       "photos": [
-        "photos/closure_9_1_1762404012839.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_9_1_1762404012839.jpg"
       ]
     },
     {
       "number": 10,
       "name": "Перекрытие 10",
       "photos": [
-        "photos/closure_10_1_1762404012844.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_10_1_1762404012844.jpg"
       ]
     },
     {
       "number": 11,
       "name": "Перекрытие 11",
       "photos": [
-        "photos/closure_11_1_1762404012849.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_11_1_1762404012849.jpg"
       ]
     },
     {
       "number": 12,
       "name": "Перекрытие 12",
       "photos": [
-        "photos/closure_12_1_1762404012853.jpg",
-        "photos/closure_12_2_1762404012859.jpg",
-        "photos/closure_12_3_1762404012867.jpg",
-        "photos/closure_12_4_1762404012873.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_12_1_1762404012853.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_12_2_1762404012859.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_12_3_1762404012867.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_12_4_1762404012873.jpg"
       ]
     },
     {
       "number": 13,
       "name": "!!ГОРА!!",
       "photos": [
-        "photos/closure_13_1_1762404012879.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_13_1_1762404012879.jpg"
       ]
     },
     {
       "number": 14,
       "name": "Перекрытие 13",
       "photos": [
-        "photos/closure_14_1_1762404012884.jpg",
-        "photos/closure_14_2_1762404012889.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_14_1_1762404012884.jpg",
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_14_2_1762404012889.jpg"
       ]
     },
     {
       "number": 15,
       "name": "Перекрытие 14",
       "photos": [
-        "photos/closure_15_1_1762404012895.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_15_1_1762404012895.jpg"
       ]
     },
     {
       "number": 16,
       "name": "Перекрытие 15",
       "photos": [
-        "photos/closure_16_1_1762404012901.jpg"
+        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_16_1_1762404012901.jpg"
       ]
     }
   ]
