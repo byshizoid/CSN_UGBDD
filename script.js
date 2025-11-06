@@ -880,6 +880,28 @@ class ClosuresApp {
         this.renderClosureButtons();
     }
 
+    showLoadingOverlay(message = 'Идёт загрузка данных') {
+        const overlay = document.getElementById('loadingOverlay');
+        const messageElement = overlay?.querySelector('.loading-message');
+        if (overlay) {
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
+            overlay.style.display = 'flex';
+            // Блокируем прокрутку страницы
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+            // Восстанавливаем прокрутку страницы
+            document.body.style.overflow = '';
+        }
+    }
+
     async saveAndSwitchMode() {
         console.log('💾 saveAndSwitchMode вызвана');
         console.log('🔍 isAdminMode:', this.isAdminMode);
@@ -942,34 +964,52 @@ class ClosuresApp {
             return;
         }
 
-        // Сохраняем данные
-        this.closures = closures;
-        
-        // Сохраняем в IndexedDB и GitHub
-        const dataToSave = {
-            mapImage: this.mapImage,
-            closures: this.closures
-        };
-        
-        console.log('💾 Сохранение данных...');
-        
-        // Сохраняем локально
-        await this.saveToDB();
-        
-        // Сохраняем в GitHub
+        // Показываем оверлей загрузки
+        this.showLoadingOverlay('Подготовка данных...');
+
         try {
-            console.log('📤 Сохранение в GitHub...');
-            await this.saveToGitHub(dataToSave);
-            const filesCount = dataToSave.closures.reduce((sum, c) => sum + (c.photos ? c.photos.length : 0), 0) + (dataToSave.mapImage ? 1 : 0);
-            alert(`✅ Данные успешно сохранены в GitHub!\n\nСохранено:\n- Карта: ${dataToSave.mapImage ? 'Да' : 'Нет'}\n- Фото перекрытий: ${filesCount}\n- Все файлы в папке: photos/\n\nТеперь они доступны всем пользователям.`);
+            // Сохраняем данные
+            this.closures = closures;
+            
+            // Сохраняем в IndexedDB и GitHub
+            const dataToSave = {
+                mapImage: this.mapImage,
+                closures: this.closures
+            };
+            
+            console.log('💾 Сохранение данных...');
+            this.showLoadingOverlay('Сохранение локально...');
+            
+            // Сохраняем локально
+            await this.saveToDB();
+            
+            // Сохраняем в GitHub
+            try {
+                console.log('📤 Сохранение в GitHub...');
+                this.showLoadingOverlay('Загрузка файлов в GitHub...');
+                
+                await this.saveToGitHub(dataToSave);
+                
+                const filesCount = dataToSave.closures.reduce((sum, c) => sum + (c.photos ? c.photos.length : 0), 0) + (dataToSave.mapImage ? 1 : 0);
+                
+                // Скрываем оверлей перед показом сообщения
+                this.hideLoadingOverlay();
+                
+                alert(`✅ Данные успешно сохранены в GitHub!\n\nСохранено:\n- Карта: ${dataToSave.mapImage ? 'Да' : 'Нет'}\n- Фото перекрытий: ${filesCount}\n- Все файлы в папке: photos/\n\nТеперь они доступны всем пользователям.`);
+            } catch (e) {
+                console.error('❌ Ошибка сохранения в GitHub:', e);
+                this.hideLoadingOverlay();
+                alert('⚠️ Данные сохранены локально, но не удалось сохранить в GitHub:\n' + e.message + '\n\nПроверьте настройки GitHub и убедитесь, что папка photos/ существует в репозитории.');
+            }
+            
+            // Переключаем режим
+            console.log('👁️ Переключение в режим просмотра...');
+            this.switchToViewMode();
         } catch (e) {
-            console.error('❌ Ошибка сохранения в GitHub:', e);
-            alert('⚠️ Данные сохранены локально, но не удалось сохранить в GitHub:\n' + e.message + '\n\nПроверьте настройки GitHub и убедитесь, что папка photos/ существует в репозитории.');
+            console.error('❌ Общая ошибка при сохранении:', e);
+            this.hideLoadingOverlay();
+            alert('Ошибка при сохранении данных: ' + e.message);
         }
-        
-        // Переключаем режим
-        console.log('👁️ Переключение в режим просмотра...');
-        this.switchToViewMode();
     }
 
     renderClosureButtons() {
