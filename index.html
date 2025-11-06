@@ -92,7 +92,12 @@
     <div id="photoModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2 id="modalTitle">Перекрытие</h2>
+            <div id="modalTitleContainer" class="modal-title-container">
+                <h2 id="modalTitle" class="modal-title">Перекрытие</h2>
+                <input type="text" id="modalTitleInput" class="modal-title-input" style="display: none;" placeholder="Название перекрытия">
+                <button id="editTitleBtn" class="btn-icon" style="display: none;" title="Редактировать название">✏️</button>
+                <button id="saveTitleBtn" class="btn-icon" style="display: none;" title="Сохранить название">✅</button>
+            </div>
             <div class="photo-controls">
                 <button id="prevPhoto" class="nav-btn">‹</button>
                 <div class="photo-container">
@@ -103,9 +108,11 @@
             <div class="photo-toolbar">
                 <span id="photoCounter" class="photo-counter">1 / 1</span>
                 <div id="adminPhotoControls" class="admin-photo-controls" style="display: none;">
+                    <button id="addPhotoBtn" class="btn btn-sm btn-primary">➕ Добавить фото</button>
                     <button id="replacePhotoBtn" class="btn btn-sm btn-secondary">🔄 Заменить фото</button>
                     <button id="deletePhotoBtn" class="btn btn-sm btn-danger">🗑️ Удалить фото</button>
                     <input type="file" id="replacePhotoInput" accept="image/*" style="display: none;">
+                    <input type="file" id="addPhotoInput" accept="image/*" multiple style="display: none;">
                 </div>
             </div>
         </div>

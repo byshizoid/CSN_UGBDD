@@ -183,6 +183,34 @@ class ClosuresApp {
                 this.deleteCurrentPhoto();
             }
         });
+
+        // Редактирование названия перекрытия
+        document.getElementById('editTitleBtn').addEventListener('click', () => {
+            this.startEditingTitle();
+        });
+
+        document.getElementById('saveTitleBtn').addEventListener('click', () => {
+            this.saveTitle();
+        });
+
+        document.getElementById('modalTitleInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.saveTitle();
+            } else if (e.key === 'Escape') {
+                this.cancelEditingTitle();
+            }
+        });
+
+        // Добавление фото к перекрытию
+        document.getElementById('addPhotoBtn').addEventListener('click', () => {
+            document.getElementById('addPhotoInput').click();
+        });
+
+        document.getElementById('addPhotoInput').addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                this.addPhotosToClosure(Array.from(e.target.files));
+            }
+        });
     }
 
     requestAdminAccess() {
@@ -703,19 +731,28 @@ class ClosuresApp {
 
         const modal = document.getElementById('photoModal');
         const modalTitle = document.getElementById('modalTitle');
+        const modalTitleInput = document.getElementById('modalTitleInput');
+        const editTitleBtn = document.getElementById('editTitleBtn');
+        const saveTitleBtn = document.getElementById('saveTitleBtn');
         const adminControls = document.getElementById('adminPhotoControls');
         
         modalTitle.textContent = closure.name;
+        modalTitleInput.value = closure.name;
         this.currentClosure = closure;
         this.currentPhotoIndex = 0;
         
         // Показываем кнопки редактирования только в режиме администратора
         if (this.isAdminMode) {
             adminControls.style.display = 'flex';
+            editTitleBtn.style.display = 'inline-block';
             // Сохраняем номер перекрытия для редактирования
             this.currentEditingClosureNumber = closureNumber;
         } else {
             adminControls.style.display = 'none';
+            editTitleBtn.style.display = 'none';
+            saveTitleBtn.style.display = 'none';
+            modalTitleInput.style.display = 'none';
+            modalTitle.style.display = 'block';
         }
         
         // Отображаем галерею фото
@@ -792,6 +829,11 @@ class ClosuresApp {
         this.currentEditingClosureNumber = null;
         // Очищаем input для замены фото
         document.getElementById('replacePhotoInput').value = '';
+        document.getElementById('addPhotoInput').value = '';
+        // Сбрасываем режим редактирования названия
+        if (this.cancelEditingTitle) {
+            this.cancelEditingTitle();
+        }
     }
 
     replaceCurrentPhoto(file) {
@@ -863,6 +905,121 @@ class ClosuresApp {
         if (this.autoSaveEnabled) {
             this.scheduleAutoSave();
         }
+    }
+
+    startEditingTitle() {
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTitleInput = document.getElementById('modalTitleInput');
+        const editTitleBtn = document.getElementById('editTitleBtn');
+        const saveTitleBtn = document.getElementById('saveTitleBtn');
+
+        modalTitle.style.display = 'none';
+        modalTitleInput.style.display = 'block';
+        editTitleBtn.style.display = 'none';
+        saveTitleBtn.style.display = 'inline-block';
+        modalTitleInput.focus();
+        modalTitleInput.select();
+    }
+
+    cancelEditingTitle() {
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTitleInput = document.getElementById('modalTitleInput');
+        const editTitleBtn = document.getElementById('editTitleBtn');
+        const saveTitleBtn = document.getElementById('saveTitleBtn');
+
+        // Восстанавливаем исходное значение
+        if (this.currentClosure) {
+            modalTitleInput.value = this.currentClosure.name;
+        }
+
+        modalTitle.style.display = 'block';
+        modalTitleInput.style.display = 'none';
+        editTitleBtn.style.display = 'inline-block';
+        saveTitleBtn.style.display = 'none';
+    }
+
+    saveTitle() {
+        if (!this.isAdminMode || !this.currentClosure || !this.currentEditingClosureNumber) {
+            return;
+        }
+
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTitleInput = document.getElementById('modalTitleInput');
+        const editTitleBtn = document.getElementById('editTitleBtn');
+        const saveTitleBtn = document.getElementById('saveTitleBtn');
+        const newName = modalTitleInput.value.trim();
+
+        if (!newName) {
+            alert('Название не может быть пустым!');
+            return;
+        }
+
+        // Обновляем название
+        this.currentClosure.name = newName;
+        modalTitle.textContent = newName;
+
+        // Обновляем в массиве closures
+        const closure = this.closures.find(c => c.number === this.currentEditingClosureNumber);
+        if (closure) {
+            closure.name = newName;
+        }
+
+        // Обновляем кнопку перекрытия
+        this.renderClosureButtons();
+
+        // Скрываем поле ввода
+        modalTitle.style.display = 'block';
+        modalTitleInput.style.display = 'none';
+        editTitleBtn.style.display = 'inline-block';
+        saveTitleBtn.style.display = 'none';
+
+        // Автосохранение в GitHub
+        if (this.autoSaveEnabled) {
+            this.scheduleAutoSave();
+        }
+    }
+
+    addPhotosToClosure(files) {
+        if (!this.isAdminMode || !this.currentClosure || !this.currentEditingClosureNumber) {
+            return;
+        }
+
+        // Загружаем все файлы
+        const loadPromises = files.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(loadPromises).then(photos => {
+            // Добавляем новые фото к существующим
+            this.currentClosure.photos = [...this.currentClosure.photos, ...photos];
+
+            // Обновляем в массиве closures
+            const closure = this.closures.find(c => c.number === this.currentEditingClosureNumber);
+            if (closure) {
+                closure.photos = [...closure.photos, ...photos];
+            }
+
+            // Обновляем отображение галереи
+            this.renderPhotoGallery(this.currentClosure.photos);
+
+            // Переключаемся на последнее добавленное фото
+            this.currentPhotoIndex = this.currentClosure.photos.length - 1;
+            this.renderPhotoGallery(this.currentClosure.photos);
+
+            // Автосохранение в GitHub
+            if (this.autoSaveEnabled) {
+                this.scheduleAutoSave();
+            }
+
+            // Очищаем input
+            document.getElementById('addPhotoInput').value = '';
+
+            alert(`Добавлено ${photos.length} фото!`);
+        });
     }
 
     async saveToDB() {
