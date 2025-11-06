@@ -1,49 +1,56 @@
 {
-  "mapImage": "photos/map_1762403645333.png",
+  "mapImage": "photos/map_1762403716323.png",
   "closures": [
     {
       "number": 1,
       "name": "Перекрытие 1",
       "photos": [
-        "photos/closure_1_1_1762403645337.jpg"
+        "photos/closure_1_1_1762403716327.jpg"
       ]
     },
     {
       "number": 2,
       "name": "Перекрытие 2",
       "photos": [
-        "photos/closure_2_1_1762403645342.jpg"
+        "photos/closure_2_1_1762403716332.jpg"
       ]
     },
     {
       "number": 3,
       "name": "Перекрытие 3",
       "photos": [
-        "photos/closure_3_1_1762403645347.jpg",
-        "photos/closure_3_2_1762403645352.jpg",
-        "photos/closure_3_3_1762403645356.jpg"
+        "photos/closure_3_1_1762403716336.jpg",
+        "photos/closure_3_2_1762403716341.jpg",
+        "photos/closure_3_3_1762403716347.jpg"
       ]
     },
     {
       "number": 4,
       "name": "Перекрытие 4",
       "photos": [
-        "photos/closure_4_1_1762403645362.jpg"
+        "photos/closure_4_1_1762403716352.jpg"
       ]
     },
     {
       "number": 5,
       "name": "Перекрытие 5",
       "photos": [
-        "photos/closure_5_1_1762403645366.jpg",
-        "photos/closure_5_2_1762403645371.jpg"
+        "photos/closure_5_1_1762403716357.jpg",
+        "photos/closure_5_2_1762403716362.jpg"
       ]
     },
     {
       "number": 6,
       "name": "Перекрытие 6",
       "photos": [
-        "photos/closure_6_1_1762403645376.jpg"
+        "photos/closure_6_1_1762403716367.jpg"
+      ]
+    },
+    {
+      "number": 7,
+      "name": "Перекрытие 7",
+      "photos": [
+        "photos/closure_7_1_1762403716371.jpg"
       ]
     }
   ]
