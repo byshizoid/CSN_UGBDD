@@ -1,11 +1,27 @@
 {
-  "mapImage": "photos/map_1762403529339.png",
+  "mapImage": "photos/map_1762403583543.png",
   "closures": [
     {
       "number": 1,
       "name": "Перекрытие 1",
       "photos": [
-        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762400958376.jpg"
+        "photos/closure_1_1_1762403583547.jpg"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Перекрытие 2",
+      "photos": [
+        "photos/closure_2_1_1762403583551.jpg"
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Перекрытие 3",
+      "photos": [
+        "photos/closure_3_1_1762403583556.jpg",
+        "photos/closure_3_2_1762403583562.jpg",
+        "photos/closure_3_3_1762403583567.jpg"
       ]
     }
   ]
