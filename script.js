@@ -65,6 +65,15 @@ class ClosuresApp {
         this.currentClosure = null;
         this.currentPhotoIndex = 0;
         this.currentEditingClosureNumber = null;
+        // Состояние зума
+        this.photoZoom = {
+            scale: 1,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            translateX: 0,
+            translateY: 0
+        };
         // Пароль администратора (хранится локально, не в коде)
         // Если пароль не установлен, нужно установить его при первом входе
         this.adminPassword = localStorage.getItem('admin_password');
@@ -139,6 +148,28 @@ class ClosuresApp {
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-closure-btn')) {
                 this.deleteClosure(e.target.dataset.number);
+            }
+        });
+        
+        // Глобальные обработчики для перетаскивания увеличенных фото
+        document.addEventListener('mousemove', (e) => {
+            if (this.photoZoom.isDragging && this.photoZoom.scale > 1) {
+                const currentImg = document.querySelector('.photo-item:not([style*="display: none"]) .photo-img');
+                if (currentImg) {
+                    this.photoZoom.translateX = e.clientX - this.photoZoom.startX;
+                    this.photoZoom.translateY = e.clientY - this.photoZoom.startY;
+                    this.applyPhotoTransform(currentImg);
+                }
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (this.photoZoom.isDragging) {
+                this.photoZoom.isDragging = false;
+                const currentImg = document.querySelector('.photo-item:not([style*="display: none"]) .photo-img');
+                if (currentImg) {
+                    currentImg.style.cursor = this.photoZoom.scale > 1 ? 'grab' : 'zoom-in';
+                }
             }
         });
 
@@ -903,6 +934,8 @@ class ClosuresApp {
             img.src = photo;
             img.alt = `Фото ${index + 1}`;
             img.className = 'photo-img';
+            img.style.cursor = 'zoom-in';
+            img.style.transition = 'transform 0.3s ease';
             
             // Обработка ошибок загрузки
             img.onerror = () => {
@@ -917,6 +950,57 @@ class ClosuresApp {
                 console.log('Фото загружено:', photo);
             };
             
+            // Зум двойным кликом
+            img.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.togglePhotoZoom(img, photoItem);
+            });
+            
+            // Зум колесиком мыши
+            img.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                this.zoomPhoto(img, photoItem, delta, e.clientX, e.clientY);
+            }, { passive: false });
+            
+            // Перетаскивание увеличенного изображения
+            img.addEventListener('mousedown', (e) => {
+                if (this.photoZoom.scale > 1) {
+                    e.preventDefault();
+                    this.photoZoom.isDragging = true;
+                    this.photoZoom.startX = e.clientX - this.photoZoom.translateX;
+                    this.photoZoom.startY = e.clientY - this.photoZoom.translateY;
+                    img.style.cursor = 'grabbing';
+                }
+            });
+            
+            // Touch события для мобильных устройств
+            img.addEventListener('touchstart', (e) => {
+                if (this.photoZoom.scale > 1 && e.touches.length === 1) {
+                    e.preventDefault();
+                    this.photoZoom.isDragging = true;
+                    this.photoZoom.startX = e.touches[0].clientX - this.photoZoom.translateX;
+                    this.photoZoom.startY = e.touches[0].clientY - this.photoZoom.translateY;
+                }
+            }, { passive: false });
+            
+            img.addEventListener('touchmove', (e) => {
+                if (this.photoZoom.isDragging && this.photoZoom.scale > 1 && e.touches.length === 1) {
+                    e.preventDefault();
+                    this.photoZoom.translateX = e.touches[0].clientX - this.photoZoom.startX;
+                    this.photoZoom.translateY = e.touches[0].clientY - this.photoZoom.startY;
+                    this.applyPhotoTransform(img);
+                }
+            }, { passive: false });
+            
+            img.addEventListener('touchend', () => {
+                if (this.photoZoom.isDragging) {
+                    this.photoZoom.isDragging = false;
+                }
+            });
+            
             photoItem.appendChild(img);
             photoGallery.appendChild(photoItem);
         });
@@ -924,8 +1008,68 @@ class ClosuresApp {
         photoCounter.textContent = `${this.currentPhotoIndex + 1} / ${photos.length}`;
     }
 
+    togglePhotoZoom(img, container) {
+        if (this.photoZoom.scale === 1) {
+            // Увеличиваем
+            this.photoZoom.scale = 2.5;
+            this.photoZoom.translateX = 0;
+            this.photoZoom.translateY = 0;
+            img.style.cursor = 'grab';
+        } else {
+            // Сбрасываем
+            this.photoZoom.scale = 1;
+            this.photoZoom.translateX = 0;
+            this.photoZoom.translateY = 0;
+            img.style.cursor = 'zoom-in';
+        }
+        this.applyPhotoTransform(img);
+    }
+
+    zoomPhoto(img, container, delta, centerX, centerY) {
+        const oldScale = this.photoZoom.scale;
+        this.photoZoom.scale = Math.max(1, Math.min(5, this.photoZoom.scale + delta));
+        
+        // Если масштаб увеличился, центрируем на точке клика
+        if (this.photoZoom.scale > 1 && oldScale === 1) {
+            const rect = img.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            this.photoZoom.translateX = (containerRect.left + containerRect.width / 2 - centerX) * (this.photoZoom.scale - 1);
+            this.photoZoom.translateY = (containerRect.top + containerRect.height / 2 - centerY) * (this.photoZoom.scale - 1);
+        }
+        
+        if (this.photoZoom.scale > 1) {
+            img.style.cursor = 'grab';
+        } else {
+            img.style.cursor = 'zoom-in';
+            this.photoZoom.translateX = 0;
+            this.photoZoom.translateY = 0;
+        }
+        
+        this.applyPhotoTransform(img);
+    }
+
+    applyPhotoTransform(img) {
+        img.style.transform = `scale(${this.photoZoom.scale}) translate(${this.photoZoom.translateX / this.photoZoom.scale}px, ${this.photoZoom.translateY / this.photoZoom.scale}px)`;
+        img.style.transformOrigin = 'center center';
+    }
+
+    resetPhotoZoom() {
+        this.photoZoom.scale = 1;
+        this.photoZoom.translateX = 0;
+        this.photoZoom.translateY = 0;
+        this.photoZoom.isDragging = false;
+        const imgs = document.querySelectorAll('.photo-img');
+        imgs.forEach(img => {
+            img.style.transform = 'scale(1) translate(0, 0)';
+            img.style.cursor = 'zoom-in';
+        });
+    }
+
     switchPhoto(direction) {
         if (!this.currentClosure) return;
+        
+        // Сбрасываем зум при переключении фото
+        this.resetPhotoZoom();
         
         const photos = this.currentClosure.photos;
         if (direction === 'next') {
@@ -943,6 +1087,8 @@ class ClosuresApp {
         this.currentClosure = null;
         this.currentPhotoIndex = 0;
         this.currentEditingClosureNumber = null;
+        // Сбрасываем зум при закрытии
+        this.resetPhotoZoom();
         // Очищаем input для замены фото
         document.getElementById('replacePhotoInput').value = '';
         document.getElementById('addPhotoInput').value = '';

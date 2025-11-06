@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Карта перекрытий</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
     <link rel="stylesheet" href="style.css">
@@ -108,6 +108,9 @@
             </div>
             <div class="photo-toolbar">
                 <span id="photoCounter" class="photo-counter">1 / 1</span>
+                <div class="zoom-hint" style="font-size: 12px; color: #666; margin-left: 10px;">
+                    🔍 Двойной клик для увеличения • Колесико для масштабирования
+                </div>
                 <div id="adminPhotoControls" class="admin-photo-controls" style="display: none;">
                     <button id="addPhotoBtn" class="btn btn-sm btn-primary">➕ Добавить фото</button>
                     <button id="replacePhotoBtn" class="btn btn-sm btn-secondary">🔄 Заменить фото</button>
