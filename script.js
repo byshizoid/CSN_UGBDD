@@ -95,6 +95,7 @@ class ClosuresApp {
         
         // Проверка активного коммита для всех пользователей
         this.updateCheckInterval = null;
+        this.isCheckingUpdate = false; // Флаг для предотвращения одновременных проверок
         
         this.init();
     }
@@ -1029,6 +1030,13 @@ class ClosuresApp {
      * Если найден активный коммит (недавний или updating.json) - показывает табличку
      */
     async checkUpdateStatus() {
+        // Предотвращаем одновременные проверки
+        if (this.isCheckingUpdate) {
+            return false;
+        }
+        
+        this.isCheckingUpdate = true;
+        
         try {
             // Определяем owner и repo из текущего URL или пробуем загрузить из data.json
             let owner = 'byshizoid';
@@ -1052,25 +1060,39 @@ class ClosuresApp {
             // Проверяем файл updating.json через raw.githubusercontent.com (быстрее чем GitHub Pages)
             let hasUpdatingFile = false;
             try {
+                // Используем уникальный timestamp для обхода кеша
+                const cacheBuster = Date.now();
                 const updatingResponse = await fetch(
-                    `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${Date.now()}`,
-                    { cache: 'no-store' }
+                    `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${cacheBuster}`,
+                    { 
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    }
                 );
                 
                 if (updatingResponse.ok) {
-                    const status = await updatingResponse.json();
-                    if (status.isUpdating) {
-                        hasUpdatingFile = true;
-                        console.log('🔄 Обнаружен файл updating.json - идет обновление');
+                    try {
+                        const status = await updatingResponse.json();
+                        if (status && status.isUpdating === true) {
+                            hasUpdatingFile = true;
+                            console.log('🔄 Обнаружен файл updating.json - идет обновление');
+                        }
+                    } catch (parseError) {
+                        console.warn('⚠️ Ошибка парсинга updating.json:', parseError);
                     }
                 } else if (updatingResponse.status === 404) {
                     // Файл не существует - это нормально, значит обновление не активно
+                    hasUpdatingFile = false;
                 } else {
                     console.warn('⚠️ Неожиданный статус при проверке updating.json:', updatingResponse.status);
                 }
             } catch (e) {
                 // Файл не существует или ошибка сети - это нормально
                 // Не логируем ошибки, чтобы не засорять консоль
+                hasUpdatingFile = false;
             }
             
             // Проверяем последние коммиты через GitHub API (только если есть токен)
@@ -1135,34 +1157,34 @@ class ClosuresApp {
             }
             
             // Если есть файл updating.json или недавний коммит - показываем табличку
-            if (hasUpdatingFile || hasRecentCommit) {
-                // Для администратора не показываем, так как у него свой оверлей во время сохранения
-                if (!this.isAdminMode) {
-                    const overlay = document.getElementById('loadingOverlay');
-                    if (overlay) {
-                        const currentDisplay = window.getComputedStyle(overlay).display;
-                        if (currentDisplay === 'none') {
-                            this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
-                        }
-                    }
-                }
-                return true;
-            } else {
-                // Нет активного коммита - скрываем табличку
-                if (!this.isAdminMode) {
-                    const overlay = document.getElementById('loadingOverlay');
-                    if (overlay && window.getComputedStyle(overlay).display !== 'none') {
+            const shouldShowOverlay = hasUpdatingFile || hasRecentCommit;
+            
+            // Для администратора не показываем, так как у него свой оверлей во время сохранения
+            if (!this.isAdminMode) {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) {
+                    const currentDisplay = window.getComputedStyle(overlay).display;
+                    const isCurrentlyVisible = currentDisplay !== 'none';
+                    
+                    if (shouldShowOverlay && !isCurrentlyVisible) {
+                        // Нужно показать оверлей
+                        this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                    } else if (!shouldShowOverlay && isCurrentlyVisible) {
+                        // Нужно скрыть оверлей
                         this.hideLoadingOverlay();
                     }
                 }
             }
+            
+            return shouldShowOverlay;
         } catch (e) {
-            // Игнорируем ошибки сети
-            if (!this.isAdminMode) {
-                this.hideLoadingOverlay();
-            }
+            console.error('❌ Ошибка при проверке статуса обновления:', e);
+            // Игнорируем ошибки сети, но не скрываем оверлей если он уже показан
+            return false;
+        } finally {
+            // Снимаем флаг проверки
+            this.isCheckingUpdate = false;
         }
-        return false;
     }
 
     /**
@@ -1172,10 +1194,10 @@ class ClosuresApp {
         // Проверяем сразу при загрузке
         this.checkUpdateStatus();
         
-        // Проверяем каждые 2 секунды
+        // Проверяем каждые 5 секунд (оптимальный баланс между отзывчивостью и стабильностью)
         this.updateCheckInterval = setInterval(() => {
             this.checkUpdateStatus();
-        }, 2000);
+        }, 5000);
     }
 
     /**
