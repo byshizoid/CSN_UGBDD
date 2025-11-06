@@ -1164,14 +1164,40 @@ class ClosuresApp {
                         const commits = await commitsResponse.json();
                         if (commits && commits.length > 0) {
                             const lastCommit = commits[0];
+                            // Время коммита из GitHub API уже в UTC
                             const commitDate = new Date(lastCommit.commit.committer.date);
-                            const now = new Date();
-                            const diffMinutes = (now - commitDate) / (1000 * 60);
+                            
+                            // Используем время сервера GitHub из заголовка Date для более точного сравнения
+                            // Это гарантирует одинаковый результат для всех пользователей, независимо от их системного времени
+                            const serverDateHeader = commitsResponse.headers.get('Date');
+                            let nowUTC;
+                            if (serverDateHeader) {
+                                // Используем время сервера GitHub
+                                nowUTC = new Date(serverDateHeader);
+                            } else {
+                                // Fallback на локальное время, если заголовок недоступен
+                                nowUTC = new Date();
+                            }
+                            
+                            // Вычисляем разницу в миллисекундах (оба времени в UTC)
+                            const commitTimeUTC = commitDate.getTime();
+                            const nowTimeUTC = nowUTC.getTime();
+                            const diffMinutes = (nowTimeUTC - commitTimeUTC) / (1000 * 60);
                             
                             // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
                                 hasRecentCommit = true;
-                                console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message}`);
+                                // Форматируем время коммита в локальный часовой пояс для отображения
+                                const formattedDate = commitDate.toLocaleString('ru-RU', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    timeZoneName: 'short'
+                                });
+                                console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message} | Время коммита: ${formattedDate}`);
                             }
                         }
                     }
@@ -1188,8 +1214,17 @@ class ClosuresApp {
                         const lastModified = dataResponse.headers.get('last-modified');
                         if (lastModified) {
                             const lastModifiedDate = new Date(lastModified);
-                            const now = new Date();
-                            const diffMinutes = (now - lastModifiedDate) / (1000 * 60);
+                            // Используем время сервера из заголовка Date для более точного сравнения
+                            const serverDateHeader = dataResponse.headers.get('Date');
+                            let now;
+                            if (serverDateHeader) {
+                                // Используем время сервера
+                                now = new Date(serverDateHeader);
+                            } else {
+                                // Fallback на локальное время
+                                now = new Date();
+                            }
+                            const diffMinutes = (now.getTime() - lastModifiedDate.getTime()) / (1000 * 60);
                             
                             // Если data.json обновлялся менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
