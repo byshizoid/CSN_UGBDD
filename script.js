@@ -1002,9 +1002,8 @@ class ClosuresApp {
 
     /**
      * Проверяет наличие активного коммита на GitHub
-     * Читает файл updating.json через GitHub API (мгновенное обновление)
-     * Если файл существует и isUpdating: true - показывает табличку
-     * Если файл не существует - скрывает табличку
+     * Проверяет как файл updating.json, так и последние коммиты в репозитории
+     * Если найден активный коммит (недавний или updating.json) - показывает табличку
      */
     async checkUpdateStatus() {
         try {
@@ -1027,9 +1026,6 @@ class ClosuresApp {
                 }
             }
             
-            // Читаем файл updating.json через GitHub API (мгновенное обновление, без кеша GitHub Pages)
-            // Для публичных репозиториев токен не нужен, но можно использовать
-            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/updating.json?t=${Date.now()}`;
             const headers = {
                 'Accept': 'application/vnd.github.v3+json',
                 'Cache-Control': 'no-cache'
@@ -1041,31 +1037,68 @@ class ClosuresApp {
                 headers['Authorization'] = `token ${token}`;
             }
             
-            const response = await fetch(apiUrl, { headers });
-            
-            if (response.ok) {
-                const fileData = await response.json();
-                // Декодируем base64 содержимое
-                const content = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
-                const status = JSON.parse(content);
+            // Сначала проверяем файл updating.json
+            let hasUpdatingFile = false;
+            try {
+                const updatingResponse = await fetch(
+                    `https://api.github.com/repos/${owner}/${repo}/contents/updating.json?t=${Date.now()}`,
+                    { headers }
+                );
                 
-                if (status.isUpdating) {
-                    // Файл существует и коммит активен - показываем табличку всем пользователям
-                    // Для администратора не показываем, так как у него свой оверлей во время сохранения
-                    if (!this.isAdminMode) {
-                        const overlay = document.getElementById('loadingOverlay');
-                        if (overlay) {
-                            const currentDisplay = window.getComputedStyle(overlay).display;
-                            if (currentDisplay === 'none') {
-                                this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
-                            }
+                if (updatingResponse.ok) {
+                    const fileData = await updatingResponse.json();
+                    const content = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
+                    const status = JSON.parse(content);
+                    if (status.isUpdating) {
+                        hasUpdatingFile = true;
+                    }
+                }
+            } catch (e) {
+                // Файл не существует или ошибка - это нормально
+            }
+            
+            // Проверяем последние коммиты - если последний коммит недавний (менее 3 минут назад), считаем что идет обновление
+            let hasRecentCommit = false;
+            try {
+                const commitsResponse = await fetch(
+                    `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1&t=${Date.now()}`,
+                    { headers }
+                );
+                
+                if (commitsResponse.ok) {
+                    const commits = await commitsResponse.json();
+                    if (commits && commits.length > 0) {
+                        const lastCommit = commits[0];
+                        const commitDate = new Date(lastCommit.commit.committer.date);
+                        const now = new Date();
+                        const diffMinutes = (now - commitDate) / (1000 * 60);
+                        
+                        // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
+                        if (diffMinutes < 3) {
+                            hasRecentCommit = true;
+                            console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message}`);
                         }
                     }
-                    return true;
                 }
-            } else if (response.status === 404) {
-                // Файл не существует (404) - коммит завершен или не идет
-                // Это нормальная ситуация, не логируем как ошибку
+            } catch (e) {
+                // Ошибка при проверке коммитов - игнорируем
+            }
+            
+            // Если есть файл updating.json или недавний коммит - показываем табличку
+            if (hasUpdatingFile || hasRecentCommit) {
+                // Для администратора не показываем, так как у него свой оверлей во время сохранения
+                if (!this.isAdminMode) {
+                    const overlay = document.getElementById('loadingOverlay');
+                    if (overlay) {
+                        const currentDisplay = window.getComputedStyle(overlay).display;
+                        if (currentDisplay === 'none') {
+                            this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
+                        }
+                    }
+                }
+                return true;
+            } else {
+                // Нет активного коммита - скрываем табличку
                 if (!this.isAdminMode) {
                     const overlay = document.getElementById('loadingOverlay');
                     if (overlay && window.getComputedStyle(overlay).display !== 'none') {
@@ -1074,8 +1107,7 @@ class ClosuresApp {
                 }
             }
         } catch (e) {
-            // Игнорируем ошибки сети (404 - это нормально, файл просто не существует)
-            // Не логируем в консоль, чтобы не спамить
+            // Игнорируем ошибки сети
             if (!this.isAdminMode) {
                 this.hideLoadingOverlay();
             }
