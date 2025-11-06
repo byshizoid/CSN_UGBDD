@@ -895,14 +895,84 @@ class ClosuresApp {
                 messageElement.textContent = message;
             }
             overlay.style.display = 'flex';
+            overlay.style.zIndex = '999999';
             overlay.style.pointerEvents = 'all';
+            
             // Блокируем прокрутку страницы
             document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.height = '100%';
+            
             // Добавляем класс для полной блокировки всех элементов
             document.body.classList.add('loading-active');
+            
             // Блокируем все взаимодействия со страницей
             document.body.style.pointerEvents = 'none';
             overlay.style.pointerEvents = 'all';
+            
+            // Блокируем все события клавиатуры и мыши на уровне документа
+            this.blockAllInteractions();
+            
+            console.log('🔒 Интерфейс заблокирован');
+        }
+    }
+    
+    blockAllInteractions() {
+        // Блокируем все клики и взаимодействия
+        const blockEvent = (e) => {
+            // Разрешаем события только для самого оверлея
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay && overlay.contains(e.target)) {
+                return; // Разрешаем события внутри оверлея
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+        };
+        
+        // Сохраняем обработчики для последующего удаления
+        if (!this.blockHandlers) {
+            this.blockHandlers = {
+                click: blockEvent,
+                mousedown: blockEvent,
+                mouseup: blockEvent,
+                touchstart: blockEvent,
+                touchmove: blockEvent,
+                touchend: blockEvent,
+                keydown: (e) => {
+                    // Разрешаем только Escape для отладки (можно убрать)
+                    if (e.key === 'Escape' && e.ctrlKey) {
+                        return; // Ctrl+Escape для принудительной разблокировки (только для отладки)
+                    }
+                    return blockEvent(e);
+                },
+                keyup: blockEvent,
+                scroll: blockEvent,
+                wheel: blockEvent,
+                contextmenu: blockEvent,
+                dragstart: blockEvent,
+                drag: blockEvent,
+                drop: blockEvent
+            };
+            
+            // Добавляем обработчики на document и window
+            Object.keys(this.blockHandlers).forEach(eventType => {
+                document.addEventListener(eventType, this.blockHandlers[eventType], { capture: true, passive: false });
+                window.addEventListener(eventType, this.blockHandlers[eventType], { capture: true, passive: false });
+            });
+        }
+    }
+    
+    unblockAllInteractions() {
+        // Удаляем блокирующие обработчики
+        if (this.blockHandlers) {
+            Object.keys(this.blockHandlers).forEach(eventType => {
+                document.removeEventListener(eventType, this.blockHandlers[eventType], { capture: true });
+                window.removeEventListener(eventType, this.blockHandlers[eventType], { capture: true });
+            });
+            this.blockHandlers = null;
         }
     }
 
@@ -911,11 +981,22 @@ class ClosuresApp {
         if (overlay) {
             overlay.style.display = 'none';
             overlay.style.pointerEvents = 'none';
+            overlay.style.zIndex = '';
+            
             // Убираем класс блокировки
             document.body.classList.remove('loading-active');
+            
             // Восстанавливаем прокрутку страницы и взаимодействия
             document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
             document.body.style.pointerEvents = '';
+            
+            // Разблокируем все события
+            this.unblockAllInteractions();
+            
+            console.log('🔓 Интерфейс разблокирован');
         }
     }
 
@@ -949,7 +1030,11 @@ class ClosuresApp {
                 // Файл не существует (404) - коммит завершен или не идет
                 // Это нормальная ситуация, не логируем как ошибку
                 if (!this.isAdminMode) {
-                    this.hideLoadingOverlay();
+                    const overlay = document.getElementById('loadingOverlay');
+                    if (overlay && window.getComputedStyle(overlay).display !== 'none') {
+                        console.log('🔓 Коммит завершен - разблокируем интерфейс');
+                        this.hideLoadingOverlay();
+                    }
                 }
             }
         } catch (e) {
