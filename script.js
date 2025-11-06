@@ -1211,48 +1211,116 @@ class ClosuresApp {
                     // Ошибка при проверке коммитов - игнорируем
                 }
             } else {
-                // Если нет токена, проверяем через GitHub Pages (медленнее, но работает)
-                // Проверяем data.json - если он недавно обновился, значит был коммит
+                // Если нет токена, пробуем использовать GitHub API без токена (для публичных репозиториев это работает)
+                // Это даст более точное время коммита, чем Last-Modified из data.json
                 try {
-                    const dataUrl = `data.json?t=${Date.now()}`;
-                    const dataResponse = await fetch(dataUrl, { cache: 'no-store' });
-                    if (dataResponse.ok) {
-                        // Проверяем заголовок Last-Modified или ETag
-                        const lastModified = dataResponse.headers.get('last-modified');
-                        if (lastModified) {
-                            const lastModifiedDate = new Date(lastModified);
-                            // Используем время сервера из заголовка Date для более точного сравнения
-                            const serverDateHeader = dataResponse.headers.get('Date');
-                            let now;
-                            if (serverDateHeader) {
-                                // Используем время сервера
-                                now = new Date(serverDateHeader);
-                                console.debug('🔍 Используем время сервера из заголовка Date:', serverDateHeader);
-                            } else {
-                                // Fallback на локальное время
-                                now = new Date();
-                                console.debug('⚠️ Заголовок Date недоступен, используем локальное время');
+                    const commitsResponse = await fetch(
+                        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
+                        {
+                            headers: {
+                                'Accept': 'application/vnd.github.v3+json'
+                                // Не добавляем Authorization - используем публичный доступ
                             }
-                            const diffMinutes = (now.getTime() - lastModifiedDate.getTime()) / (1000 * 60);
+                        }
+                    );
+                    
+                    if (commitsResponse.ok) {
+                        const commits = await commitsResponse.json();
+                        if (commits && commits.length > 0) {
+                            const lastCommit = commits[0];
+                            // Время коммита из GitHub API уже в UTC
+                            const commitDate = new Date(lastCommit.commit.committer.date);
                             
-                            console.debug(`🔍 data.json: Last-Modified=${lastModified}, diffMinutes=${diffMinutes.toFixed(2)}`);
+                            // Используем время сервера GitHub из заголовка Date для более точного сравнения
+                            const serverDateHeader = commitsResponse.headers.get('Date');
+                            let nowUTC;
+                            if (serverDateHeader) {
+                                // Используем время сервера GitHub
+                                nowUTC = new Date(serverDateHeader);
+                            } else {
+                                // Fallback на локальное время, если заголовок недоступен
+                                nowUTC = new Date();
+                            }
                             
-                            // Если data.json обновлялся менее 3 минут назад, считаем что идет обновление
+                            // Вычисляем разницу в миллисекундах (оба времени в UTC)
+                            const commitTimeUTC = commitDate.getTime();
+                            const nowTimeUTC = nowUTC.getTime();
+                            const diffMinutes = (nowTimeUTC - commitTimeUTC) / (1000 * 60);
+                            
+                            // Если коммит был сделан менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
                                 hasRecentCommit = true;
-                                console.log(`🔄 data.json обновлен недавно (${diffMinutes.toFixed(1)} мин назад)`);
-                            } else {
-                                console.debug(`🔍 data.json обновлен ${diffMinutes.toFixed(1)} мин назад - слишком давно`);
+                                // Форматируем время коммита в локальный часовой пояс для отображения
+                                const formattedDate = commitDate.toLocaleString('ru-RU', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    timeZoneName: 'short'
+                                });
+                                console.log(`🔄 Обнаружен недавний коммит (${diffMinutes.toFixed(1)} мин назад): ${lastCommit.commit.message} | Время коммита: ${formattedDate}`);
                             }
-                        } else {
-                            console.debug('🔍 Заголовок Last-Modified недоступен для data.json');
                         }
-                    } else {
-                        console.debug(`🔍 data.json вернул статус: ${dataResponse.status}`);
+                    } else if (commitsResponse.status === 403 || commitsResponse.status === 401) {
+                        // Если API недоступен без токена (приватный репозиторий или rate limit), используем fallback
+                        console.debug('🔍 GitHub API недоступен без токена, используем fallback через data.json');
+                        // Fallback на проверку через data.json
+                        try {
+                            const dataUrl = `data.json?t=${Date.now()}`;
+                            const dataResponse = await fetch(dataUrl, { cache: 'no-store' });
+                            if (dataResponse.ok) {
+                                const lastModified = dataResponse.headers.get('last-modified');
+                                if (lastModified) {
+                                    const lastModifiedDate = new Date(lastModified);
+                                    const serverDateHeader = dataResponse.headers.get('Date');
+                                    let now;
+                                    if (serverDateHeader) {
+                                        now = new Date(serverDateHeader);
+                                    } else {
+                                        now = new Date();
+                                    }
+                                    const diffMinutes = (now.getTime() - lastModifiedDate.getTime()) / (1000 * 60);
+                                    
+                                    if (diffMinutes < 3) {
+                                        hasRecentCommit = true;
+                                        console.log(`🔄 data.json обновлен недавно (${diffMinutes.toFixed(1)} мин назад)`);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.debug('🔍 Ошибка при проверке data.json:', e.message);
+                        }
                     }
                 } catch (e) {
-                    // Ошибка - логируем для отладки
-                    console.debug('🔍 Ошибка при проверке data.json:', e.message);
+                    // Ошибка при запросе к GitHub API - пробуем fallback через data.json
+                    console.debug('🔍 Ошибка при проверке через GitHub API, используем fallback:', e.message);
+                    try {
+                        const dataUrl = `data.json?t=${Date.now()}`;
+                        const dataResponse = await fetch(dataUrl, { cache: 'no-store' });
+                        if (dataResponse.ok) {
+                            const lastModified = dataResponse.headers.get('last-modified');
+                            if (lastModified) {
+                                const lastModifiedDate = new Date(lastModified);
+                                const serverDateHeader = dataResponse.headers.get('Date');
+                                let now;
+                                if (serverDateHeader) {
+                                    now = new Date(serverDateHeader);
+                                } else {
+                                    now = new Date();
+                                }
+                                const diffMinutes = (now.getTime() - lastModifiedDate.getTime()) / (1000 * 60);
+                                
+                                if (diffMinutes < 3) {
+                                    hasRecentCommit = true;
+                                    console.log(`🔄 data.json обновлен недавно (${diffMinutes.toFixed(1)} мин назад)`);
+                                }
+                            }
+                        }
+                    } catch (e2) {
+                        console.debug('🔍 Ошибка при проверке data.json:', e2.message);
+                    }
                 }
             }
             
