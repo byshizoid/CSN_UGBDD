@@ -155,6 +155,18 @@
         </div>
     </div>
 
+    <!-- Модальное окно для полноэкранного просмотра фото -->
+    <div id="photoZoomModal" class="photo-zoom-modal" style="display: none;">
+        <div class="photo-zoom-backdrop"></div>
+        <div class="photo-zoom-container">
+            <button class="photo-zoom-close" id="photoZoomClose">&times;</button>
+            <img id="photoZoomImage" class="photo-zoom-image" src="" alt="Увеличенное фото">
+            <div class="photo-zoom-controls">
+                <button class="photo-zoom-btn" id="photoZoomReset">⟲ Сбросить</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Оверлей загрузки -->
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="loading-content">

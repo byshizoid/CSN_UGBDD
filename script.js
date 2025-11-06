@@ -74,6 +74,20 @@ class ClosuresApp {
             translateX: 0,
             translateY: 0
         };
+        // Состояние зума для модального окна
+        this.zoomModalState = {
+            scale: 1,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            translateX: 0,
+            translateY: 0
+        };
+        // Обработчики для модального окна (для последующего удаления)
+        this.zoomModalHandlers = {
+            mouseMove: null,
+            mouseUp: null
+        };
         // Пароль администратора (хранится локально, не в коде)
         // Если пароль не установлен, нужно установить его при первом входе
         this.adminPassword = localStorage.getItem('admin_password');
@@ -318,6 +332,16 @@ class ClosuresApp {
         // Клавиатурная навигация
         document.addEventListener('keydown', (e) => {
             const modal = document.getElementById('photoModal');
+            const zoomModal = document.getElementById('photoZoomModal');
+            
+            // Если открыто модальное окно zoom, закрываем его по Escape
+            if (zoomModal && zoomModal.classList.contains('show')) {
+                if (e.key === 'Escape') {
+                    this.closeZoomModal();
+                }
+                return;
+            }
+            
             if (!modal.classList.contains('show')) return;
             
             if (e.key === 'ArrowLeft') {
@@ -328,6 +352,31 @@ class ClosuresApp {
                 this.closeModal();
             }
         });
+
+        // Обработчики для модального окна полноэкранного просмотра
+        const photoZoomClose = document.getElementById('photoZoomClose');
+        if (photoZoomClose) {
+            photoZoomClose.addEventListener('click', () => {
+                this.closeZoomModal();
+            });
+        }
+
+        const photoZoomReset = document.getElementById('photoZoomReset');
+        if (photoZoomReset) {
+            photoZoomReset.addEventListener('click', () => {
+                this.resetZoomModal();
+            });
+        }
+
+        const photoZoomModal = document.getElementById('photoZoomModal');
+        if (photoZoomModal) {
+            // Закрытие при клике на фон
+            photoZoomModal.addEventListener('click', (e) => {
+                if (e.target === photoZoomModal || e.target.classList.contains('photo-zoom-backdrop')) {
+                    this.closeZoomModal();
+                }
+            });
+        }
 
         // Редактирование фото в режиме администратора
         document.getElementById('replacePhotoBtn').addEventListener('click', () => {
@@ -1644,20 +1693,219 @@ class ClosuresApp {
     }
 
     togglePhotoZoom(img, container) {
-        if (this.photoZoom.scale === 1) {
-            // Увеличиваем
-            this.photoZoom.scale = 2.5;
-            this.photoZoom.translateX = 0;
-            this.photoZoom.translateY = 0;
+        // Открываем модальное окно для полноэкранного просмотра
+        this.openZoomModal(img.src);
+    }
+
+    openZoomModal(imageSrc) {
+        const modal = document.getElementById('photoZoomModal');
+        const zoomImage = document.getElementById('photoZoomImage');
+        
+        if (!modal || !zoomImage) return;
+        
+        // Устанавливаем источник изображения
+        zoomImage.src = imageSrc;
+        
+        // Сбрасываем состояние зума
+        this.resetZoomModal();
+        
+        // Показываем модальное окно с анимацией
+        modal.style.display = 'flex';
+        // Небольшая задержка для запуска анимации
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
+        // Блокируем прокрутку страницы
+        document.body.style.overflow = 'hidden';
+        
+        // Настраиваем обработчики для зума и перетаскивания
+        this.setupZoomModalHandlers();
+    }
+
+    closeZoomModal() {
+        const modal = document.getElementById('photoZoomModal');
+        if (!modal) return;
+        
+        // Удаляем обработчики событий
+        if (this.zoomModalHandlers.mouseMove) {
+            document.removeEventListener('mousemove', this.zoomModalHandlers.mouseMove);
+            this.zoomModalHandlers.mouseMove = null;
+        }
+        if (this.zoomModalHandlers.mouseUp) {
+            document.removeEventListener('mouseup', this.zoomModalHandlers.mouseUp);
+            this.zoomModalHandlers.mouseUp = null;
+        }
+        
+        // Убираем класс show для анимации закрытия
+        modal.classList.remove('show');
+        
+        // Ждем окончания анимации и скрываем
+        setTimeout(() => {
+            modal.style.display = 'none';
+            // Восстанавливаем прокрутку
+            document.body.style.overflow = '';
+        }, 300);
+        
+        // Сбрасываем состояние
+        this.resetZoomModal();
+    }
+
+    resetZoomModal() {
+        this.zoomModalState = {
+            scale: 1,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            translateX: 0,
+            translateY: 0
+        };
+        
+        const zoomImage = document.getElementById('photoZoomImage');
+        if (zoomImage) {
+            this.applyZoomModalTransform(zoomImage);
+            zoomImage.style.cursor = 'grab';
+        }
+    }
+
+    setupZoomModalHandlers() {
+        const zoomImage = document.getElementById('photoZoomImage');
+        if (!zoomImage) return;
+        
+        // Удаляем старые обработчики, если они есть
+        const newImage = zoomImage.cloneNode(true);
+        zoomImage.parentNode.replaceChild(newImage, zoomImage);
+        
+        // Зум колесиком мыши
+        newImage.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = e.deltaY > 0 ? -0.2 : 0.2;
+            this.zoomModalImage(newImage, delta, e.clientX, e.clientY);
+        }, { passive: false });
+        
+        // Перетаскивание
+        newImage.addEventListener('mousedown', (e) => {
+            if (this.zoomModalState.scale > 1) {
+                e.preventDefault();
+                this.zoomModalState.isDragging = true;
+                this.zoomModalState.startX = e.clientX - this.zoomModalState.translateX;
+                this.zoomModalState.startY = e.clientY - this.zoomModalState.translateY;
+                newImage.style.cursor = 'grabbing';
+            }
+        });
+
+        // Обработчики для перетаскивания мышью (на document для работы даже если курсор выйдет за пределы изображения)
+        // Удаляем старые обработчики, если они есть
+        if (this.zoomModalHandlers.mouseMove) {
+            document.removeEventListener('mousemove', this.zoomModalHandlers.mouseMove);
+        }
+        if (this.zoomModalHandlers.mouseUp) {
+            document.removeEventListener('mouseup', this.zoomModalHandlers.mouseUp);
+        }
+
+        const handleMouseMove = (e) => {
+            if (this.zoomModalState.isDragging && this.zoomModalState.scale > 1) {
+                e.preventDefault();
+                this.zoomModalState.translateX = e.clientX - this.zoomModalState.startX;
+                this.zoomModalState.translateY = e.clientY - this.zoomModalState.startY;
+                this.applyZoomModalTransform(newImage);
+            }
+        };
+
+        const handleMouseUp = () => {
+            if (this.zoomModalState.isDragging) {
+                this.zoomModalState.isDragging = false;
+                if (this.zoomModalState.scale > 1) {
+                    newImage.style.cursor = 'grab';
+                }
+            }
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        // Сохраняем ссылки для последующего удаления
+        this.zoomModalHandlers.mouseMove = handleMouseMove;
+        this.zoomModalHandlers.mouseUp = handleMouseUp;
+        
+        // Touch события для мобильных
+        newImage.addEventListener('touchstart', (e) => {
+            if (this.zoomModalState.scale > 1 && e.touches.length === 1) {
+                e.preventDefault();
+                this.zoomModalState.isDragging = true;
+                this.zoomModalState.startX = e.touches[0].clientX - this.zoomModalState.translateX;
+                this.zoomModalState.startY = e.touches[0].clientY - this.zoomModalState.translateY;
+            } else if (e.touches.length === 2) {
+                // Pinch zoom
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                newImage.dataset.initialDistance = distance;
+                newImage.dataset.initialScale = this.zoomModalState.scale;
+            }
+        }, { passive: false });
+        
+        newImage.addEventListener('touchmove', (e) => {
+            if (this.zoomModalState.isDragging && this.zoomModalState.scale > 1 && e.touches.length === 1) {
+                e.preventDefault();
+                this.zoomModalState.translateX = e.touches[0].clientX - this.zoomModalState.startX;
+                this.zoomModalState.translateY = e.touches[0].clientY - this.zoomModalState.startY;
+                this.applyZoomModalTransform(newImage);
+            } else if (e.touches.length === 2) {
+                // Pinch zoom
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                const initialDistance = parseFloat(newImage.dataset.initialDistance || distance);
+                const initialScale = parseFloat(newImage.dataset.initialScale || 1);
+                const scaleChange = distance / initialDistance;
+                this.zoomModalState.scale = Math.max(1, Math.min(5, initialScale * scaleChange));
+                this.applyZoomModalTransform(newImage);
+            }
+        }, { passive: false });
+        
+        newImage.addEventListener('touchend', () => {
+            this.zoomModalState.isDragging = false;
+            delete newImage.dataset.initialDistance;
+            delete newImage.dataset.initialScale;
+        });
+    }
+
+    zoomModalImage(img, delta, centerX, centerY) {
+        const oldScale = this.zoomModalState.scale;
+        this.zoomModalState.scale = Math.max(1, Math.min(5, this.zoomModalState.scale + delta));
+        
+        // Если масштаб увеличился, центрируем на точке клика
+        if (this.zoomModalState.scale > 1 && oldScale === 1) {
+            const rect = img.getBoundingClientRect();
+            const containerRect = img.parentElement.getBoundingClientRect();
+            this.zoomModalState.translateX = (containerRect.left + containerRect.width / 2 - centerX) * (this.zoomModalState.scale - 1);
+            this.zoomModalState.translateY = (containerRect.top + containerRect.height / 2 - centerY) * (this.zoomModalState.scale - 1);
+        }
+        
+        if (this.zoomModalState.scale > 1) {
             img.style.cursor = 'grab';
         } else {
-            // Сбрасываем
-            this.photoZoom.scale = 1;
-            this.photoZoom.translateX = 0;
-            this.photoZoom.translateY = 0;
-            img.style.cursor = 'zoom-in';
+            img.style.cursor = 'grab';
+            this.zoomModalState.translateX = 0;
+            this.zoomModalState.translateY = 0;
         }
-        this.applyPhotoTransform(img);
+        
+        this.applyZoomModalTransform(img);
+    }
+
+    applyZoomModalTransform(img) {
+        img.style.transform = `scale(${this.zoomModalState.scale}) translate(${this.zoomModalState.translateX / this.zoomModalState.scale}px, ${this.zoomModalState.translateY / this.zoomModalState.scale}px)`;
+        img.style.transformOrigin = 'center center';
     }
 
     zoomPhoto(img, container, delta, centerX, centerY) {

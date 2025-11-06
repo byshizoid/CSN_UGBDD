@@ -1358,3 +1358,176 @@ body.loading-active .loading-overlay * {
         min-height: 44px;
     }
 }
+
+/* Модальное окно для полноэкранного просмотра фото */
+.photo-zoom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.photo-zoom-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.photo-zoom-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(5px);
+}
+
+.photo-zoom-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1;
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.photo-zoom-modal.show .photo-zoom-container {
+    transform: scale(1);
+}
+
+.photo-zoom-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: none;
+    transition: transform 0.1s ease-out;
+    transform-origin: center center;
+}
+
+.photo-zoom-image:active {
+    cursor: grabbing;
+}
+
+.photo-zoom-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    font-size: 32px;
+    color: #333;
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.photo-zoom-close:hover {
+    background: white;
+    transform: scale(1.1) rotate(90deg);
+}
+
+.photo-zoom-close:active {
+    transform: scale(0.95) rotate(90deg);
+}
+
+.photo-zoom-controls {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 2;
+}
+
+.photo-zoom-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 24px;
+    font-size: 16px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+}
+
+.photo-zoom-btn:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.photo-zoom-btn:active {
+    transform: translateY(0);
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .photo-zoom-container {
+        padding: 10px;
+    }
+
+    .photo-zoom-close {
+        top: 10px;
+        right: 10px;
+        width: 44px;
+        height: 44px;
+        font-size: 28px;
+    }
+
+    .photo-zoom-controls {
+        bottom: 20px;
+        flex-direction: column;
+        width: calc(100% - 40px);
+        max-width: 300px;
+    }
+
+    .photo-zoom-btn {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .photo-zoom-close {
+        top: 5px;
+        right: 5px;
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+
+    .photo-zoom-controls {
+        bottom: 10px;
+    }
+}
