@@ -3,14 +3,13 @@
     "default": {
       "id": "default",
       "name": "КРЕМЛЬ - ВС РФ",
-      "mapImage": "photos/map_1762405731240.png",
+      "mapImage": "photos/map_1762407151208.png",
       "closures": [
         {
           "number": 1,
           "name": "Перекрытие 1",
           "photos": [
-            "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762404012715.jpg",
-            "photos/closure_1_2_1762405731243.jpg"
+            "photos/closure_1_1_1762407151211.jpg"
           ]
         }
       ]
