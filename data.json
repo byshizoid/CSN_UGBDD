@@ -132,17 +132,18 @@
     "escort_1762405641577": {
       "id": "escort_1762405641577",
       "name": "ВС РФ - КРЕМЛЬ",
-      "mapImage": "photos/map_1762405669338.png",
+      "mapImage": "photos/map_1762409549808.png",
       "closures": [
         {
           "number": 1,
-          "name": "Перекрытие 2",
+          "name": "Перекрытие 1",
           "photos": [
-            "photos/closure_1_1_1762405669342.jpg"
+            "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762409371413.jpg",
+            "photos/closure_1_2_1762409549815.jpg"
           ]
         }
       ]
     }
   },
-  "defaultEscort": "default"
+  "defaultEscort": "escort_1762405641577"
 }
