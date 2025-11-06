@@ -1214,7 +1214,8 @@ class ClosuresApp {
                 // Если нет токена, проверяем через GitHub Pages (медленнее, но работает)
                 // Проверяем data.json - если он недавно обновился, значит был коммит
                 try {
-                    const dataResponse = await fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' });
+                    const dataUrl = `data.json?t=${Date.now()}`;
+                    const dataResponse = await fetch(dataUrl, { cache: 'no-store' });
                     if (dataResponse.ok) {
                         // Проверяем заголовок Last-Modified или ETag
                         const lastModified = dataResponse.headers.get('last-modified');
@@ -1226,29 +1227,40 @@ class ClosuresApp {
                             if (serverDateHeader) {
                                 // Используем время сервера
                                 now = new Date(serverDateHeader);
+                                console.debug('🔍 Используем время сервера из заголовка Date:', serverDateHeader);
                             } else {
                                 // Fallback на локальное время
                                 now = new Date();
+                                console.debug('⚠️ Заголовок Date недоступен, используем локальное время');
                             }
                             const diffMinutes = (now.getTime() - lastModifiedDate.getTime()) / (1000 * 60);
+                            
+                            console.debug(`🔍 data.json: Last-Modified=${lastModified}, diffMinutes=${diffMinutes.toFixed(2)}`);
                             
                             // Если data.json обновлялся менее 3 минут назад, считаем что идет обновление
                             if (diffMinutes < 3) {
                                 hasRecentCommit = true;
                                 console.log(`🔄 data.json обновлен недавно (${diffMinutes.toFixed(1)} мин назад)`);
+                            } else {
+                                console.debug(`🔍 data.json обновлен ${diffMinutes.toFixed(1)} мин назад - слишком давно`);
                             }
+                        } else {
+                            console.debug('🔍 Заголовок Last-Modified недоступен для data.json');
                         }
+                    } else {
+                        console.debug(`🔍 data.json вернул статус: ${dataResponse.status}`);
                     }
                 } catch (e) {
-                    // Ошибка - игнорируем
+                    // Ошибка - логируем для отладки
+                    console.debug('🔍 Ошибка при проверке data.json:', e.message);
                 }
             }
             
             // Если есть файл updating.json или недавний коммит - показываем табличку
             const shouldShowOverlay = hasUpdatingFile || hasRecentCommit;
             
-            // Логируем результат проверки для отладки
-            console.debug(`🔍 Проверка статуса: updating.json=${hasUpdatingFile}, recentCommit=${hasRecentCommit}, shouldShow=${shouldShowOverlay}, isAdmin=${this.isAdminMode}`);
+            // Логируем результат проверки для отладки (используем console.log чтобы всегда было видно)
+            console.log(`🔍 Проверка статуса: updating.json=${hasUpdatingFile}, recentCommit=${hasRecentCommit}, shouldShow=${shouldShowOverlay}, isAdmin=${this.isAdminMode}`);
             
             // Для администратора не показываем, так как у него свой оверлей во время сохранения
             if (!this.isAdminMode) {
@@ -1256,6 +1268,8 @@ class ClosuresApp {
                 if (overlay) {
                     const currentDisplay = window.getComputedStyle(overlay).display;
                     const isCurrentlyVisible = currentDisplay !== 'none';
+                    
+                    console.log(`🔍 Состояние таблички: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
                     
                     if (shouldShowOverlay && !isCurrentlyVisible) {
                         // Нужно показать оверлей
@@ -1266,13 +1280,13 @@ class ClosuresApp {
                         console.log('📢 Скрываю табличку загрузки');
                         this.hideLoadingOverlay();
                     } else {
-                        console.debug(`🔍 Табличка уже в правильном состоянии: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
+                        console.log(`🔍 Табличка уже в правильном состоянии: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
                     }
                 } else {
-                    console.warn('⚠️ Элемент loadingOverlay не найден!');
+                    console.error('⚠️ Элемент loadingOverlay не найден!');
                 }
             } else {
-                console.debug('🔍 Администратор - не показываю табличку');
+                console.log('🔍 Администратор - не показываю табличку');
             }
             
             return shouldShowOverlay;
