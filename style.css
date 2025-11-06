@@ -722,6 +722,18 @@ header p {
     gap: 15px;
 }
 
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
 .escort-controls label {
     font-weight: 600;
     color: #333;

@@ -247,6 +247,21 @@ class ClosuresApp {
             adminEscortSelect.addEventListener('change', (e) => {
                 if (e.target.value) {
                     this.loadEscortForEditing(e.target.value);
+                } else {
+                    // Скрываем кнопку удаления, если ничего не выбрано
+                    const deleteBtn = document.getElementById('deleteEscortBtn');
+                    if (deleteBtn) {
+                        deleteBtn.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        const deleteEscortBtn = document.getElementById('deleteEscortBtn');
+        if (deleteEscortBtn) {
+            deleteEscortBtn.addEventListener('click', () => {
+                if (this.currentEscortId) {
+                    this.deleteEscort(this.currentEscortId);
                 }
             });
         }
@@ -2357,6 +2372,16 @@ class ClosuresApp {
                     }
                 }
             }
+            
+            // Показываем кнопку удаления, если выбрано сопровождение
+            const deleteBtn = document.getElementById('deleteEscortBtn');
+            if (deleteBtn) {
+                if (this.currentEscortId && this.escorts.length > 1) {
+                    deleteBtn.style.display = 'inline-block';
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            }
         } else {
             // Скрываем управление сопровождениями, если не админ
             const escortManagement = document.getElementById('escortManagement');
@@ -2419,6 +2444,12 @@ class ClosuresApp {
         }
         
         this.currentEscortId = escortId;
+        
+        // Показываем кнопку удаления
+        const deleteBtn = document.getElementById('deleteEscortBtn');
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+        }
         this.currentEscortName = escort.name;
         
         // Преобразуем пути в base64 для редактирования
@@ -2728,6 +2759,150 @@ class ClosuresApp {
         
         // Закрываем форму редактирования
         this.cancelEditingEscortName();
+    }
+
+    async deleteEscort(escortId) {
+        if (!this.isAdminMode) return;
+        
+        // Нельзя удалить последнее сопровождение
+        if (this.escorts.length <= 1) {
+            alert('Нельзя удалить последнее сопровождение! Создайте новое перед удалением.');
+            return;
+        }
+        
+        // Находим сопровождение для удаления
+        const escort = this.escorts.find(e => e.id === escortId);
+        if (!escort) {
+            alert('Сопровождение не найдено!');
+            return;
+        }
+        
+        // Подтверждение удаления
+        const confirmMessage = `Вы уверены, что хотите удалить сопровождение "${escort.name}"?\n\nЭто действие нельзя отменить!`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        try {
+            // Удаляем сопровождение из локального списка
+            this.escorts = this.escorts.filter(e => e.id !== escortId);
+            
+            // Если удаляемое сопровождение было текущим, переключаемся на первое доступное
+            if (this.currentEscortId === escortId) {
+                if (this.escorts.length > 0) {
+                    this.currentEscortId = this.escorts[0].id;
+                    this.currentEscortName = this.escorts[0].name;
+                    // Загружаем первое сопровождение для редактирования
+                    await this.loadEscortForEditing(this.currentEscortId);
+                } else {
+                    this.currentEscortId = null;
+                    this.currentEscortName = null;
+                    this.mapImage = null;
+                    this.closures = [];
+                }
+            }
+            
+            // Обновляем селекторы
+            this.updateEscortSelectors();
+            
+            // Сохраняем изменения в GitHub
+            if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
+                try {
+                    // Загружаем текущие данные
+                    const response = await fetch('data.json?t=' + Date.now());
+                    let allEscortsData = {};
+                    let defaultEscortId = this.currentEscortId || 'default';
+                    
+                    if (response.ok) {
+                        const existingData = await response.json();
+                        if (existingData.escorts) {
+                            allEscortsData = existingData.escorts;
+                            defaultEscortId = existingData.defaultEscort || this.currentEscortId || defaultEscortId;
+                        }
+                    }
+                    
+                    // Удаляем сопровождение из данных
+                    delete allEscortsData[escortId];
+                    
+                    // Если удаленное сопровождение было defaultEscort, выбираем первое доступное
+                    if (defaultEscortId === escortId && Object.keys(allEscortsData).length > 0) {
+                        defaultEscortId = Object.keys(allEscortsData)[0];
+                        this.currentEscortId = defaultEscortId;
+                        this.currentEscortName = allEscortsData[defaultEscortId]?.name || defaultEscortId;
+                    }
+                    
+                    // Сохраняем в GitHub
+                    const jsonData = JSON.stringify({
+                        escorts: allEscortsData,
+                        defaultEscort: defaultEscortId
+                    }, null, 2);
+                    
+                    const content = btoa(unescape(encodeURIComponent(jsonData)));
+                    
+                    // Получаем SHA для обновления
+                    let sha = null;
+                    try {
+                        const getResponse = await fetch(
+                            `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
+                            {
+                                headers: {
+                                    'Authorization': `token ${this.githubConfig.token}`,
+                                    'Accept': 'application/vnd.github.v3+json'
+                                }
+                            }
+                        );
+                        if (getResponse.ok) {
+                            const fileData = await getResponse.json();
+                            sha = fileData.sha;
+                        }
+                    } catch (e) {
+                        console.log('Файл не существует');
+                    }
+                    
+                    const saveResponse = await fetch(
+                        `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${this.githubConfig.token}`,
+                                'Accept': 'application/vnd.github.v3+json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: `Удаление сопровождения: ${escort.name}`,
+                                content: content,
+                                sha: sha
+                            })
+                        }
+                    );
+                    
+                    if (saveResponse.ok) {
+                        alert(`✅ Сопровождение "${escort.name}" успешно удалено из GitHub!`);
+                    } else {
+                        throw new Error('Ошибка сохранения в GitHub');
+                    }
+                } catch (e) {
+                    console.error('Ошибка сохранения в GitHub:', e);
+                    alert(`⚠️ Сопровождение удалено локально, но не удалось сохранить в GitHub: ${e.message}`);
+                }
+            } else {
+                alert(`✅ Сопровождение "${escort.name}" удалено локально. Для сохранения в GitHub укажите настройки GitHub.`);
+            }
+            
+            // Обновляем кнопку удаления
+            const deleteBtn = document.getElementById('deleteEscortBtn');
+            if (deleteBtn) {
+                if (this.currentEscortId) {
+                    deleteBtn.style.display = 'inline-block';
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            }
+            
+        } catch (e) {
+            console.error('Ошибка удаления сопровождения:', e);
+            alert('Ошибка при удалении сопровождения: ' + e.message);
+        }
     }
 }
 
