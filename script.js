@@ -133,8 +133,11 @@ class ClosuresApp {
         const adminBtn = document.getElementById('adminLoginBtn');
         if (adminBtn) {
             adminBtn.addEventListener('click', () => {
+                console.log('🔐 Кнопка администратора нажата');
                 this.requestAdminAccess();
             });
+        } else {
+            console.error('❌ Кнопка adminLoginBtn не найдена!');
         }
 
         // Сохранение GitHub настроек
@@ -214,27 +217,64 @@ class ClosuresApp {
         });
     }
 
-    requestAdminAccess() {
+    async requestAdminAccess() {
+        console.log('🔐 requestAdminAccess вызван');
+        console.log('📋 Текущая конфигурация:', {
+            owner: this.githubConfig.owner,
+            repo: this.githubConfig.repo,
+            hasToken: !!this.githubConfig.token
+        });
+        
         // Проверяем, есть ли GitHub токен (это и есть пароль администратора)
         if (!this.githubConfig.token) {
-            alert('Для доступа к режиму администратора нужен GitHub Personal Access Token.\n\nУкажите токен в настройках GitHub.');
+            console.log('⚠️ Токен не найден, показываем форму настройки');
             // Показываем форму настройки
-            document.getElementById('setupSection').style.display = 'block';
-            document.getElementById('adminAccess').style.display = 'none';
+            const setupSection = document.getElementById('setupSection');
+            const adminAccess = document.getElementById('adminAccess');
+            
+            if (setupSection) {
+                setupSection.style.display = 'block';
+            } else {
+                console.error('❌ Элемент setupSection не найден!');
+            }
+            
+            if (adminAccess) {
+                adminAccess.style.display = 'none';
+            } else {
+                console.error('❌ Элемент adminAccess не найден!');
+            }
+            
+            const headerDesc = document.getElementById('headerDescription');
+            if (headerDesc) {
+                headerDesc.textContent = 'Настройка GitHub для режима администратора';
+            }
+            
+            // Заполняем поля, если что-то есть
+            const repoOwner = document.getElementById('repoOwner');
+            const repoName = document.getElementById('repoName');
+            if (repoOwner) repoOwner.value = this.githubConfig.owner;
+            if (repoName) repoName.value = this.githubConfig.repo;
             return;
         }
         
         // Проверяем токен, пытаясь получить информацию о репозитории
-        this.verifyGitHubToken().then((isValid) => {
+        try {
+            const isValid = await this.verifyGitHubToken();
             if (isValid) {
                 this.isAdminMode = true;
                 this.enableAdminMode();
             } else {
                 alert('Неверный GitHub токен! Проверьте токен в настройках.');
+                // Показываем форму для исправления
+                document.getElementById('setupSection').style.display = 'block';
+                document.getElementById('adminAccess').style.display = 'none';
             }
-        }).catch((error) => {
+        } catch (error) {
             alert('Ошибка проверки токена: ' + error.message);
-        });
+            // Показываем форму для исправления
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('adminAccess').style.display = 'none';
+        }
     }
 
     async verifyGitHubToken() {
@@ -635,82 +675,41 @@ class ClosuresApp {
         }
     }
 
-    async saveAndSwitchMode() {
-        // Собираем все данные
-        const closures = [];
-        document.querySelectorAll('.closure-item').forEach((item, index) => {
-            const number = index + 1;
-            const nameInput = item.querySelector('.closure-name-input');
-            const photoInput = item.querySelector('.closure-photo-input');
-            
-            const name = nameInput ? nameInput.value : `Перекрытие ${number}`;
-            const closure = this.closures.find(c => c.number === parseInt(photoInput.dataset.number));
-            
-            if (closure && closure.photos && closure.photos.length > 0) {
-                closures.push({
-                    number: number,
-                    name: name,
-                    photos: closure.photos
-                });
-            }
-        });
-
-        // Проверяем данные
-        if (!this.mapImage) {
-            alert('Пожалуйста, загрузите карту!');
-            return;
-        }
-
-        if (closures.length === 0) {
-            alert('Пожалуйста, загрузите хотя бы одно фото перекрытия!');
-            return;
-        }
-
-        // Сохраняем данные
-        this.closures = closures;
-        this.mapImage = this.mapImage;
-        
-        // Сохраняем в IndexedDB
-        await this.saveToDB();
-        
-        // Сохраняем в GitHub, если настроено
-        if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
-            this.showAutoSaveIndicator('saving', '🔄 Сохраняется в GitHub...');
-            
-            try {
-                const dataToSave = {
-                    mapImage: this.mapImage,
-                    closures: this.closures
-                };
-                await this.saveToGitHub(dataToSave);
-                
-                const commitUrl = `https://github.com/${this.githubConfig.owner}/${this.githubConfig.repo}/commits/master`;
-                this.showAutoSaveIndicator('success', '✅ Сохранено в GitHub', commitUrl);
-            } catch (e) {
-                console.error('Ошибка сохранения в GitHub:', e);
-                this.showAutoSaveIndicator('error', `❌ Ошибка: ${e.message}`);
-            }
-        }
-        
-        // Переключаем режим
-        this.switchToViewMode();
-    }
-
     switchToViewMode() {
+        console.log('👁️ Переключение в режим просмотра...');
+        console.log('📊 Данные:', {
+            closuresCount: this.closures.length,
+            hasMapImage: !!this.mapImage
+        });
+        
         // Скрываем режим настройки (если администратор)
         if (this.isAdminMode) {
-            document.getElementById('setupSection').style.display = 'none';
+            const setupSection = document.getElementById('setupSection');
+            if (setupSection) {
+                setupSection.style.display = 'none';
+            }
         }
         
         // Показываем режим просмотра
         const viewSection = document.getElementById('viewSection');
+        if (!viewSection) {
+            console.error('❌ Элемент viewSection не найден!');
+            return;
+        }
         viewSection.style.display = 'block';
         
         // Устанавливаем карту
         if (this.mapImage) {
             const mapImage = document.getElementById('mapImage');
-            mapImage.src = this.mapImage;
-            mapImage.style.display = 'block';
+            if (mapImage) {
+                mapImage.src = this.mapImage;
+                mapImage.style.display = 'block';
+                console.log('✅ Карта установлена:', this.mapImage);
+            } else {
+                console.error('❌ Элемент mapImage не найден!');
+            }
+        } else {
+            console.warn('⚠️ Карта не загружена');
         }
         
         // Создаем кнопки перекрытий
@@ -777,18 +776,31 @@ class ClosuresApp {
     }
 
     renderClosureButtons() {
+        console.log('🔘 renderClosureButtons вызван, перекрытий:', this.closures.length);
         const buttonsContainer = document.getElementById('closuresButtons');
+        if (!buttonsContainer) {
+            console.error('❌ Элемент closuresButtons не найден!');
+            return;
+        }
+        
         buttonsContainer.innerHTML = '';
+        
+        if (this.closures.length === 0) {
+            console.warn('⚠️ Нет перекрытий для отображения');
+            return;
+        }
         
         this.closures.forEach(closure => {
             const button = document.createElement('button');
             button.className = 'closure-button';
-            button.textContent = closure.name;
+            button.textContent = closure.name || `Перекрытие ${closure.number}`;
             button.addEventListener('click', () => {
                 this.showClosurePhoto(closure.number);
             });
             buttonsContainer.appendChild(button);
         });
+        
+        console.log('✅ Кнопки перекрытий созданы:', this.closures.length);
     }
 
     showClosurePhoto(closureNumber) {
@@ -1106,15 +1118,20 @@ class ClosuresApp {
     }
 
     async loadSavedData() {
+        console.log('📥 Загрузка сохраненных данных...');
         try {
             // Сначала пытаемся загрузить из GitHub (data.json)
             const loaded = await this.loadFromGitHub();
+            console.log('📥 Результат загрузки из GitHub:', loaded);
             
             if (!loaded) {
+                console.log('📥 Пробуем загрузить из IndexedDB...');
                 // Если не получилось, пробуем из IndexedDB
                 const data = await DBHelper.load('closures_data');
+                console.log('📥 Данные из IndexedDB:', data);
                 
                 if (data && data.closures && data.closures.length > 0) {
+                    console.log('✅ Найдены данные в IndexedDB, загружаем...');
                     // Мигрируем старые данные (если было одно фото)
                     this.closures = data.closures.map(closure => {
                         if (closure.photo && !closure.photos) {
@@ -1127,12 +1144,17 @@ class ClosuresApp {
                     });
                     this.mapImage = data.mapImage;
                     
+                    console.log('✅ Загружено перекрытий:', this.closures.length);
+                    console.log('✅ Карта загружена:', !!this.mapImage);
+                    
                     // Автоматически показываем режим просмотра
                     this.switchToViewMode();
+                } else {
+                    console.log('⚠️ Данные не найдены ни в GitHub, ни в IndexedDB');
                 }
             }
         } catch (e) {
-            console.error('Ошибка загрузки:', e);
+            console.error('❌ Ошибка загрузки:', e);
         }
     }
 
@@ -1206,6 +1228,9 @@ class ClosuresApp {
                 // Автоматически показываем режим просмотра
                 this.switchToViewMode();
                 return true;
+            } else {
+                // Данные есть, но нет перекрытий
+                return false;
             }
         } catch (e) {
             console.log('Не удалось загрузить из GitHub, пробуем локальный кеш:', e);
