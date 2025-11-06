@@ -83,15 +83,28 @@ class ClosuresApp {
     }
 
     init() {
+        console.log('🚀 Инициализация приложения...');
+        console.log('🔍 Проверка DOM:', {
+            adminBtn: document.getElementById('adminLoginBtn'),
+            setupSection: document.getElementById('setupSection'),
+            adminAccess: document.getElementById('adminAccess')
+        });
         this.setupEventListeners();
         this.loadSavedData();
+        console.log('✅ Инициализация завершена');
     }
 
     setupEventListeners() {
+        console.log('🔧 Настройка обработчиков событий...');
         // Загрузка карты
-        document.getElementById('mapInput').addEventListener('change', (e) => {
-            this.handleMapUpload(e.target.files[0]);
-        });
+        const mapInput = document.getElementById('mapInput');
+        if (mapInput) {
+            mapInput.addEventListener('change', (e) => {
+                this.handleMapUpload(e.target.files[0]);
+            });
+        } else {
+            console.warn('⚠️ mapInput не найден');
+        }
 
         // Добавление нового перекрытия
         document.getElementById('addClosureBtn').addEventListener('click', () => {
@@ -131,13 +144,37 @@ class ClosuresApp {
 
         // Вход в режим администратора
         const adminBtn = document.getElementById('adminLoginBtn');
+        console.log('🔍 Поиск кнопки adminLoginBtn:', adminBtn);
         if (adminBtn) {
-            adminBtn.addEventListener('click', () => {
-                console.log('🔐 Кнопка администратора нажата');
-                this.requestAdminAccess();
+            console.log('✅ Кнопка найдена, добавляем обработчик');
+            adminBtn.addEventListener('click', (e) => {
+                console.log('🔐 Кнопка администратора нажата', e);
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    this.requestAdminAccess();
+                } catch (error) {
+                    console.error('❌ Ошибка при вызове requestAdminAccess:', error);
+                    alert('Ошибка: ' + error.message);
+                }
             });
+            // Также пробуем через onclick на случай проблем с addEventListener
+            adminBtn.onclick = (e) => {
+                console.log('🔐 Кнопка администратора нажата (onclick)', e);
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    this.requestAdminAccess();
+                } catch (error) {
+                    console.error('❌ Ошибка при вызове requestAdminAccess:', error);
+                    alert('Ошибка: ' + error.message);
+                }
+                return false;
+            };
         } else {
             console.error('❌ Кнопка adminLoginBtn не найдена!');
+            console.error('🔍 Все кнопки на странице:', document.querySelectorAll('button'));
+            console.error('🔍 Все элементы с id:', document.querySelectorAll('[id]'));
         }
 
         // Сохранение GitHub настроек
@@ -224,6 +261,8 @@ class ClosuresApp {
             repo: this.githubConfig.repo,
             hasToken: !!this.githubConfig.token
         });
+        console.log('🔍 this:', this);
+        console.log('🔍 this.isAdminMode:', this.isAdminMode);
         
         // Проверяем, есть ли GitHub токен (это и есть пароль администратора)
         if (!this.githubConfig.token) {
@@ -301,23 +340,20 @@ class ClosuresApp {
     }
 
     enableAdminMode() {
-            document.getElementById('setupSection').style.display = 'block';
-            document.getElementById('adminAccess').style.display = 'none';
-            document.getElementById('headerDescription').textContent = 'Режим администратора - загрузка данных';
-            
-            // Загружаем сохраненные настройки
-            document.getElementById('repoOwner').value = this.githubConfig.owner;
-            document.getElementById('repoName').value = this.githubConfig.repo;
-            document.getElementById('githubToken').value = this.githubConfig.token;
-            
-            // Включаем автосохранение
-            if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
-                this.autoSaveEnabled = true;
-                this.setupAutoSave();
-                document.getElementById('autoSaveStatus').style.display = 'block';
-            }
-        } else if (password !== null) {
-            alert('Неверный пароль!');
+        document.getElementById('setupSection').style.display = 'block';
+        document.getElementById('adminAccess').style.display = 'none';
+        document.getElementById('headerDescription').textContent = 'Режим администратора - загрузка данных';
+        
+        // Загружаем сохраненные настройки
+        document.getElementById('repoOwner').value = this.githubConfig.owner;
+        document.getElementById('repoName').value = this.githubConfig.repo;
+        document.getElementById('githubToken').value = this.githubConfig.token;
+        
+        // Включаем автосохранение
+        if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
+            this.autoSaveEnabled = true;
+            this.setupAutoSave();
+            document.getElementById('autoSaveStatus').style.display = 'block';
         }
     }
 
@@ -1447,5 +1483,28 @@ class ClosuresApp {
 let app = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    app = new ClosuresApp();
+    console.log('📄 DOM загружен, создаем приложение...');
+    try {
+        app = new ClosuresApp();
+        console.log('✅ Приложение создано:', app);
+        
+        // Дополнительная проверка кнопки после загрузки
+        setTimeout(() => {
+            const adminBtn = document.getElementById('adminLoginBtn');
+            console.log('🔍 Проверка кнопки через 1 секунду:', adminBtn);
+            if (adminBtn) {
+                console.log('✅ Кнопка существует');
+                // Тестовый клик для проверки
+                console.log('🧪 Тестируем прямой вызов...');
+                adminBtn.addEventListener('test', () => {
+                    console.log('✅ Тест работает');
+                });
+            } else {
+                console.error('❌ Кнопка все еще не найдена!');
+            }
+        }, 1000);
+    } catch (error) {
+        console.error('❌ Ошибка при создании приложения:', error);
+        alert('Ошибка инициализации: ' + error.message);
+    }
 });
