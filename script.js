@@ -88,6 +88,11 @@ class ClosuresApp {
         this.autoSaveTimer = null;
         this.autoSaveDelay = 3000; // 3 секунды задержки
         
+        // Система сопровождений
+        this.escorts = []; // Список сопровождений
+        this.currentEscortId = null; // ID текущего сопровождения
+        this.currentEscortName = null; // Название текущего сопровождения
+        
         this.init();
     }
 
@@ -213,6 +218,32 @@ class ClosuresApp {
         if (saveTokenBtn) {
             saveTokenBtn.addEventListener('click', () => {
                 this.saveGitHubConfig();
+            });
+        }
+
+        // Управление сопровождениями
+        const createEscortBtn = document.getElementById('createEscortBtn');
+        if (createEscortBtn) {
+            createEscortBtn.addEventListener('click', () => {
+                this.createNewEscort();
+            });
+        }
+
+        const adminEscortSelect = document.getElementById('adminEscortSelect');
+        if (adminEscortSelect) {
+            adminEscortSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    this.loadEscortForEditing(e.target.value);
+                }
+            });
+        }
+
+        const escortSelect = document.getElementById('escortSelect');
+        if (escortSelect) {
+            escortSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    this.loadEscortForViewing(e.target.value);
+                }
             });
         }
 
@@ -379,20 +410,60 @@ class ClosuresApp {
         document.getElementById('repoName').value = this.githubConfig.repo;
         document.getElementById('githubToken').value = this.githubConfig.token;
         
-        // Включаем автосохранение
+        // Автосохранение отключено - сохранение только при нажатии "Сохранить и начать работу"
+        // Настраиваем только локальное сохранение
         if (this.githubConfig.owner && this.githubConfig.repo && this.githubConfig.token) {
-            this.autoSaveEnabled = true;
-            this.setupAutoSave();
-            document.getElementById('autoSaveStatus').style.display = 'block';
+            this.autoSaveEnabled = false; // Отключаем автосохранение в GitHub
+            this.setupAutoSave(); // Настраиваем только локальное сохранение
+            document.getElementById('autoSaveStatus').style.display = 'none'; // Скрываем статус автосохранения
+            
+            // Загружаем список сопровождений из GitHub для выбора
+            this.loadEscortsList();
+        }
+    }
+
+    async loadEscortsList() {
+        // Загружаем список сопровождений из GitHub
+        try {
+            const response = await fetch('data.json?t=' + Date.now());
+            if (response.ok) {
+                const allData = await response.json();
+                if (allData.escorts) {
+                    this.escorts = Object.values(allData.escorts);
+                    this.updateEscortSelectors();
+                } else if (allData.closures) {
+                    // Старая структура - создаем одно сопровождение
+                    const defaultEscort = {
+                        id: 'default',
+                        name: 'Сопровождение по умолчанию',
+                        mapImage: allData.mapImage,
+                        closures: allData.closures
+                    };
+                    this.escorts = [defaultEscort];
+                    if (!this.currentEscortId) {
+                        this.currentEscortId = 'default';
+                        this.currentEscortName = defaultEscort.name;
+                    }
+                    this.updateEscortSelectors();
+                }
+            }
+        } catch (e) {
+            console.log('Не удалось загрузить список сопровождений:', e);
+            // Если нет сопровождений, создаем пустой список
+            if (this.escorts.length === 0) {
+                this.updateEscortSelectors();
+            }
         }
     }
 
 
     setupAutoSave() {
-        // Автосохранение при изменении названий перекрытий
+        // Автосохранение отключено - сохранение только при нажатии "Сохранить и начать работу"
+        // Оставляем только локальное сохранение при изменении названий
         document.addEventListener('input', (e) => {
-            if (e.target.classList.contains('closure-name-input') && this.isAdminMode && this.autoSaveEnabled) {
-                this.scheduleAutoSave();
+            if (e.target.classList.contains('closure-name-input') && this.isAdminMode) {
+                // Сохраняем только локально, не в GitHub
+                this.saveToDB();
             }
         });
     }
@@ -561,12 +632,13 @@ class ClosuresApp {
             this.isAdminMode = true;
             this.enableAdminMode();
             
-            // Включаем автосохранение
-            this.autoSaveEnabled = true;
-            this.setupAutoSave();
-            document.getElementById('autoSaveStatus').style.display = 'block';
+            // Настройки сохранены, автосохранение отключено
+            // Сохранение в GitHub будет только при нажатии "Сохранить и начать работу"
+            this.autoSaveEnabled = false; // Отключаем автосохранение
+            this.setupAutoSave(); // Настраиваем только локальное сохранение
+            document.getElementById('autoSaveStatus').style.display = 'none'; // Скрываем статус автосохранения
             
-            alert('✅ Настройки сохранены! Режим администратора включен.');
+            alert('✅ Настройки сохранены! Режим администратора включен.\n\nВсе изменения будут сохранены в GitHub только после нажатия кнопки "Сохранить и начать работу".');
         } catch (error) {
             console.error('Ошибка проверки токена:', error);
             alert('Ошибка проверки токена: ' + error.message);
@@ -583,10 +655,9 @@ class ClosuresApp {
             preview.innerHTML = `<img src="${e.target.result}" alt="Карта">`;
             preview.style.display = 'block';
             
-            // Автосохранение в GitHub
-            if (this.isAdminMode && this.autoSaveEnabled) {
-                this.scheduleAutoSave();
-            }
+            // Сохранение только локально (в IndexedDB), не в GitHub
+            // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+            this.saveToDB();
         };
         reader.readAsDataURL(file);
     }
@@ -625,10 +696,9 @@ class ClosuresApp {
             // Обновляем превью
             this.updateClosurePreview(number, closure.photos);
             
-            // Автосохранение в GitHub
-            if (this.isAdminMode && this.autoSaveEnabled) {
-                this.scheduleAutoSave();
-            }
+            // Сохранение только локально (в IndexedDB), не в GitHub
+            // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+            this.saveToDB();
         });
     }
 
@@ -687,10 +757,9 @@ class ClosuresApp {
         `;
         closuresList.appendChild(closureItem);
         
-        // Автосохранение при добавлении перекрытия
-        if (this.isAdminMode && this.autoSaveEnabled) {
-            this.scheduleAutoSave();
-        }
+        // Сохранение только локально (в IndexedDB), не в GitHub
+        // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+        this.saveToDB();
     }
 
     deleteClosure(number) {
@@ -703,10 +772,9 @@ class ClosuresApp {
             item.remove();
         }
         
-        // Автосохранение при удалении перекрытия
-        if (this.isAdminMode && this.autoSaveEnabled) {
-            this.scheduleAutoSave();
-        }
+        // Сохранение только локально (в IndexedDB), не в GitHub
+        // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+        this.saveToDB();
     }
 
     deletePhotoFromClosure(closureNumber, photoIndex) {
@@ -735,10 +803,9 @@ class ClosuresApp {
             this.updateClosurePreview(closureNumber, closure.photos);
         }
         
-        // Автосохранение при удалении фото
-        if (this.isAdminMode && this.autoSaveEnabled) {
-            this.scheduleAutoSave();
-        }
+        // Сохранение только локально (в IndexedDB), не в GitHub
+        // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+        this.saveToDB();
     }
 
     switchToViewMode() {
@@ -1119,12 +1186,11 @@ class ClosuresApp {
             // Обновляем отображение галереи
             this.renderPhotoGallery(this.currentClosure.photos);
             
-            // Автосохранение в GitHub
-            if (this.autoSaveEnabled) {
-                this.scheduleAutoSave();
-            }
+            // Сохранение только локально (в IndexedDB), не в GitHub
+            // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+            this.saveToDB();
             
-            alert('Фото заменено! Изменения будут сохранены автоматически.');
+            alert('Фото заменено! Изменения будут сохранены в GitHub после нажатия "Сохранить и начать работу".');
         };
         reader.readAsDataURL(file);
     }
@@ -1163,10 +1229,9 @@ class ClosuresApp {
         // Обновляем кнопки перекрытий (если фото закончились, кнопка должна исчезнуть)
         this.renderClosureButtons();
         
-        // Автосохранение в GitHub
-        if (this.autoSaveEnabled) {
-            this.scheduleAutoSave();
-        }
+        // Сохранение только локально (в IndexedDB), не в GitHub
+        // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+        this.saveToDB();
     }
 
     startEditingTitle() {
@@ -1235,10 +1300,9 @@ class ClosuresApp {
         editTitleBtn.style.display = 'inline-block';
         saveTitleBtn.style.display = 'none';
 
-        // Автосохранение в GitHub
-        if (this.autoSaveEnabled) {
-            this.scheduleAutoSave();
-        }
+        // Сохранение только локально (в IndexedDB), не в GitHub
+        // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+        this.saveToDB();
     }
 
     addPhotosToClosure(files) {
@@ -1272,15 +1336,14 @@ class ClosuresApp {
             this.currentPhotoIndex = this.currentClosure.photos.length - 1;
             this.renderPhotoGallery(this.currentClosure.photos);
 
-            // Автосохранение в GitHub
-            if (this.autoSaveEnabled) {
-                this.scheduleAutoSave();
-            }
+            // Сохранение только локально (в IndexedDB), не в GitHub
+            // GitHub будет сохранен только при нажатии "Сохранить и начать работу"
+            this.saveToDB();
 
             // Очищаем input
             document.getElementById('addPhotoInput').value = '';
 
-            alert(`Добавлено ${photos.length} фото!`);
+            alert(`Добавлено ${photos.length} фото! Изменения будут сохранены в GitHub после нажатия "Сохранить и начать работу".`);
         });
     }
 
@@ -1345,7 +1408,38 @@ class ClosuresApp {
             const response = await fetch('data.json?t=' + Date.now());
             if (!response.ok) throw new Error('Файл не найден');
             
-            const data = await response.json();
+            const allData = await response.json();
+            
+            // Проверяем, новая ли структура (с сопровождениями) или старая
+            let data;
+            if (allData.escorts && typeof allData.escorts === 'object') {
+                // Новая структура с сопровождениями
+                this.escorts = Object.values(allData.escorts);
+                const defaultEscortId = allData.defaultEscort || Object.keys(allData.escorts)[0];
+                data = allData.escorts[defaultEscortId];
+                this.currentEscortId = defaultEscortId;
+                this.currentEscortName = data?.name || defaultEscortId;
+                
+                // Обновляем селекторы сопровождений
+                this.updateEscortSelectors();
+            } else if (allData.closures) {
+                // Старая структура (обратная совместимость)
+                data = allData;
+                // Создаем одно сопровождение по умолчанию
+                const defaultEscort = {
+                    id: 'default',
+                    name: 'Сопровождение по умолчанию',
+                    mapImage: data.mapImage,
+                    closures: data.closures
+                };
+                this.escorts = [defaultEscort];
+                this.currentEscortId = 'default';
+                this.currentEscortName = defaultEscort.name;
+                // Обновляем селекторы сопровождений
+                this.updateEscortSelectors();
+            } else {
+                return false;
+            }
             
             if (data && data.closures && data.closures.length > 0) {
                 // Преобразуем пути к файлам в полные URL для GitHub Pages
@@ -1489,9 +1583,54 @@ class ClosuresApp {
             console.log('Пути сохраненных файлов:', savedFiles);
         }
         
-        // Сохраняем JSON с путями к файлам
+        // Загружаем текущий data.json для сохранения структуры сопровождений
+        let allEscortsData = {};
+        let defaultEscortId = this.currentEscortId || 'default';
+        
+        try {
+            const response = await fetch('data.json?t=' + Date.now());
+            if (response.ok) {
+                const existingData = await response.json();
+                if (existingData.escorts) {
+                    allEscortsData = existingData.escorts;
+                    defaultEscortId = existingData.defaultEscort || this.currentEscortId || defaultEscortId;
+                } else if (existingData.closures) {
+                    // Старая структура - создаем сопровождение по умолчанию
+                    allEscortsData['default'] = {
+                        id: 'default',
+                        name: 'Сопровождение по умолчанию',
+                        mapImage: existingData.mapImage,
+                        closures: existingData.closures
+                    };
+                    defaultEscortId = 'default';
+                }
+            }
+        } catch (e) {
+            console.log('Не удалось загрузить существующие данные, создаем новые');
+        }
+        
+        // Обновляем или создаем текущее сопровождение
+        const escortId = this.currentEscortId || 'default';
+        const escortName = this.currentEscortName || 'Сопровождение по умолчанию';
+        
+        allEscortsData[escortId] = {
+            id: escortId,
+            name: escortName,
+            mapImage: data.mapImage,
+            closures: data.closures
+        };
+        
+        // Обновляем список сопровождений в классе
+        this.escorts = Object.values(allEscortsData);
+        this.currentEscortId = escortId;
+        this.currentEscortName = escortName;
+        
+        // Сохраняем JSON с путями к файлам и структурой сопровождений
         console.log('💾 Сохраняю data.json...');
-        const jsonData = JSON.stringify(data, null, 2);
+        const jsonData = JSON.stringify({
+            escorts: allEscortsData,
+            defaultEscort: escortId
+        }, null, 2);
         let sha = null;
         
         try {
@@ -1621,6 +1760,284 @@ class ClosuresApp {
         const result = await response.json();
         console.log(`✅ Файл сохранен в GitHub: ${result.content.html_url}`);
         return result;
+    }
+
+    updateEscortSelectors() {
+        const escortSelect = document.getElementById('escortSelect');
+        const adminEscortSelect = document.getElementById('adminEscortSelect');
+        
+        const updateSelect = (select) => {
+            if (!select) return;
+            select.innerHTML = '';
+            
+            if (this.escorts.length === 0) {
+                select.innerHTML = '<option value="">Нет сопровождений</option>';
+                return;
+            }
+            
+            this.escorts.forEach(escort => {
+                const option = document.createElement('option');
+                option.value = escort.id;
+                option.textContent = escort.name || escort.id;
+                if (escort.id === this.currentEscortId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        };
+        
+        updateSelect(escortSelect);
+        updateSelect(adminEscortSelect);
+        
+        // Показываем селектор сопровождений в режиме просмотра
+        if (this.escorts.length > 1) {
+            const escortSelector = document.getElementById('escortSelector');
+            if (escortSelector) {
+                escortSelector.style.display = 'block';
+            }
+        }
+        
+        // Показываем управление сопровождениями в режиме администратора
+        if (this.isAdminMode) {
+            const escortManagement = document.getElementById('escortManagement');
+            if (escortManagement) {
+                escortManagement.style.display = 'block';
+            }
+            
+            // Показываем название текущего сопровождения
+            if (this.currentEscortName) {
+                const currentEscortName = document.getElementById('currentEscortName');
+                const currentEscortNameText = document.getElementById('currentEscortNameText');
+                if (currentEscortName && currentEscortNameText) {
+                    currentEscortNameText.textContent = this.currentEscortName;
+                    currentEscortName.style.display = 'block';
+                }
+            }
+        }
+    }
+
+    createNewEscort() {
+        const name = prompt('Введите название нового сопровождения:');
+        if (!name || name.trim() === '') {
+            alert('Название не может быть пустым!');
+            return;
+        }
+        
+        const escortId = 'escort_' + Date.now();
+        const newEscort = {
+            id: escortId,
+            name: name.trim(),
+            mapImage: null,
+            closures: []
+        };
+        
+        this.escorts.push(newEscort);
+        this.currentEscortId = escortId;
+        this.currentEscortName = newEscort.name;
+        
+        // Очищаем текущие данные для нового сопровождения
+        this.mapImage = null;
+        this.closures = [];
+        this.currentClosureNumber = 1;
+        
+        // Очищаем форму
+        const mapPreview = document.getElementById('mapPreview');
+        if (mapPreview) {
+            mapPreview.innerHTML = '';
+            mapPreview.style.display = 'none';
+        }
+        const closuresList = document.getElementById('closuresList');
+        if (closuresList) {
+            closuresList.innerHTML = '';
+        }
+        
+        // Обновляем селекторы
+        this.updateEscortSelectors();
+        
+        // Показываем сообщение
+        alert(`Создано новое сопровождение "${newEscort.name}". Загрузите карту и фото перекрытий.`);
+    }
+
+    async loadEscortForEditing(escortId) {
+        if (!this.isAdminMode) return;
+        
+        // Загружаем данные сопровождения
+        const escort = this.escorts.find(e => e.id === escortId);
+        if (!escort) {
+            alert('Сопровождение не найдено!');
+            return;
+        }
+        
+        this.currentEscortId = escortId;
+        this.currentEscortName = escort.name;
+        
+        // Преобразуем пути в base64 для редактирования
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+        
+        // Загружаем карту
+        if (escort.mapImage) {
+            if (escort.mapImage.startsWith('photos/')) {
+                try {
+                    const response = await fetch(baseUrl + escort.mapImage);
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.mapImage = e.target.result;
+                        const preview = document.getElementById('mapPreview');
+                        if (preview) {
+                            preview.innerHTML = `<img src="${e.target.result}" alt="Карта">`;
+                            preview.style.display = 'block';
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                } catch (e) {
+                    console.error('Ошибка загрузки карты:', e);
+                }
+            } else {
+                this.mapImage = escort.mapImage;
+                const preview = document.getElementById('mapPreview');
+                if (preview) {
+                    preview.innerHTML = `<img src="${escort.mapImage}" alt="Карта">`;
+                    preview.style.display = 'block';
+                }
+            }
+        } else {
+            this.mapImage = null;
+            const preview = document.getElementById('mapPreview');
+            if (preview) {
+                preview.innerHTML = '';
+                preview.style.display = 'none';
+            }
+        }
+        
+        // Загружаем перекрытия
+        this.closures = [];
+        this.currentClosureNumber = 1;
+        
+        const closuresList = document.getElementById('closuresList');
+        if (closuresList) {
+            closuresList.innerHTML = '';
+        }
+        
+        for (const closure of escort.closures || []) {
+            this.currentClosureNumber = Math.max(this.currentClosureNumber, closure.number + 1);
+            
+            // Загружаем фото как base64
+            const photos = [];
+            for (const photoPath of closure.photos || []) {
+                if (photoPath.startsWith('photos/')) {
+                    try {
+                        const response = await fetch(baseUrl + photoPath);
+                        const blob = await response.blob();
+                        const reader = new FileReader();
+                        const photoPromise = new Promise((resolve) => {
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(blob);
+                        });
+                        const photo = await photoPromise;
+                        if (photo) photos.push(photo);
+                    } catch (e) {
+                        console.error('Ошибка загрузки фото:', e);
+                    }
+                } else {
+                    photos.push(photoPath);
+                }
+            }
+            
+            this.closures.push({
+                number: closure.number,
+                name: closure.name,
+                photos: photos
+            });
+            
+            // Создаем элемент в DOM
+            if (closuresList) {
+                const closureItem = document.createElement('div');
+                closureItem.className = 'closure-item';
+                closureItem.innerHTML = `
+                    <label class="upload-label">
+                        <div class="upload-box-small">
+                            <span class="upload-icon">📷</span>
+                            <span class="upload-text">Добавить фото</span>
+                        </div>
+                        <input type="file" class="closure-photo-input" accept="image/*" multiple data-number="${closure.number}" hidden>
+                    </label>
+                    <div class="closure-info">
+                        <input type="text" class="closure-name-input" placeholder="Перекрытие ${closure.number}" value="${closure.name}" data-number="${closure.number}">
+                        <div class="closure-preview"></div>
+                        <button class="btn btn-danger delete-closure-btn" data-number="${closure.number}">Удалить</button>
+                    </div>
+                `;
+                closuresList.appendChild(closureItem);
+                
+                // Обновляем превью
+                this.updateClosurePreview(closure.number, photos);
+            }
+        }
+        
+        // Обновляем селекторы
+        this.updateEscortSelectors();
+        
+        alert(`Загружено сопровождение "${escort.name}" для редактирования.`);
+    }
+
+    async loadEscortForViewing(escortId) {
+        // Загружаем данные сопровождения из GitHub
+        try {
+            const response = await fetch('data.json?t=' + Date.now());
+            if (!response.ok) throw new Error('Файл не найден');
+            
+            const allData = await response.json();
+            
+            if (!allData.escorts || !allData.escorts[escortId]) {
+                alert('Сопровождение не найдено!');
+                return;
+            }
+            
+            const escort = allData.escorts[escortId];
+            this.currentEscortId = escortId;
+            this.currentEscortName = escort.name;
+            
+            // Преобразуем пути в полные URL
+            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+            
+            // Загружаем карту
+            if (escort.mapImage) {
+                if (escort.mapImage.startsWith('photos/')) {
+                    this.mapImage = baseUrl + escort.mapImage;
+                } else if (escort.mapImage.startsWith('http')) {
+                    this.mapImage = escort.mapImage;
+                } else {
+                    this.mapImage = baseUrl + escort.mapImage;
+                }
+            } else {
+                this.mapImage = null;
+            }
+            
+            // Загружаем перекрытия
+            this.closures = (escort.closures || []).map(closure => {
+                if (closure.photos) {
+                    closure.photos = closure.photos.map(photo => {
+                        if (photo.startsWith('photos/')) {
+                            return baseUrl + photo;
+                        } else if (photo.startsWith('http')) {
+                            return photo;
+                        } else {
+                            return baseUrl + photo;
+                        }
+                    });
+                }
+                return closure;
+            });
+            
+            // Переключаемся в режим просмотра
+            this.switchToViewMode();
+            
+        } catch (e) {
+            console.error('Ошибка загрузки сопровождения:', e);
+            alert('Ошибка загрузки сопровождения: ' + e.message);
+        }
     }
 }
 

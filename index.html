@@ -12,6 +12,13 @@
         <header>
             <h1>Карта перекрытий</h1>
             <p id="headerDescription">Просмотр карты перекрытий</p>
+            <!-- Выбор сопровождения (для всех пользователей) -->
+            <div id="escortSelector" class="escort-selector" style="display: none;">
+                <label for="escortSelect">Сопровождение:</label>
+                <select id="escortSelect" class="escort-select">
+                    <option value="">Загрузка...</option>
+                </select>
+            </div>
         </header>
 
         <!-- Кнопка входа в режим администратора -->
@@ -21,6 +28,21 @@
 
         <!-- Режим настройки -->
         <div id="setupSection" class="setup-section" style="display: none;">
+            <!-- Управление сопровождениями (только для администратора) -->
+            <div id="escortManagement" class="escort-management" style="display: none;">
+                <h3>📋 Управление сопровождениями</h3>
+                <div class="escort-controls">
+                    <button id="createEscortBtn" class="btn btn-secondary">➕ Создать новое сопровождение</button>
+                    <label for="adminEscortSelect">Редактировать сопровождение:</label>
+                    <select id="adminEscortSelect" class="escort-select">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+                <div id="currentEscortName" class="current-escort-name" style="display: none;">
+                    <strong>Текущее сопровождение: <span id="currentEscortNameText"></span></strong>
+                </div>
+            </div>
+            
             <div class="admin-info">
                 <p>⚠️ Укажите данные для сохранения в GitHub:</p>
                 <div class="admin-config">
@@ -68,7 +90,7 @@
             <div class="actions">
                 <button id="saveSetupBtn" class="btn btn-primary">Сохранить и начать работу</button>
                 <div id="autoSaveStatus" class="auto-save-status" style="display: none;">
-                    <span>💾 Автосохранение включено</span>
+                    <span>💾 Изменения сохраняются локально. Нажмите "Сохранить и начать работу" для загрузки в GitHub.</span>
                 </div>
             </div>
         </div>

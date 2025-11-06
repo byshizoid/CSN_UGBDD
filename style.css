@@ -668,6 +668,85 @@ header p {
     margin-top: 10px;
 }
 
+/* Сопровождения */
+.escort-selector {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.escort-selector label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.escort-select {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 15px;
+    border: 2px solid #667eea;
+    border-radius: 6px;
+    font-size: 16px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.escort-select:focus {
+    outline: none;
+    border-color: #5568d3;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.escort-management {
+    background: #e7f3ff;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.escort-management h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.escort-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.escort-controls label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.escort-controls .escort-select {
+    max-width: 100%;
+}
+
+.current-escort-name {
+    margin-top: 15px;
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border: 2px solid #667eea;
+    text-align: center;
+}
+
+.current-escort-name strong {
+    color: #667eea;
+    font-size: 16px;
+}
+
 .auto-save-status {
     margin-top: 15px;
     padding: 10px;
@@ -1025,6 +1104,23 @@ header p {
 
     .help-text {
         font-size: 11px;
+    }
+
+    .escort-selector {
+        padding: 10px;
+    }
+
+    .escort-management {
+        padding: 15px;
+    }
+
+    .escort-controls {
+        gap: 10px;
+    }
+
+    .escort-select {
+        font-size: 16px; /* Предотвращает зум на iOS */
+        padding: 12px;
     }
 }
 
