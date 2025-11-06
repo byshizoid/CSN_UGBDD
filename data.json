@@ -1,12 +1,11 @@
 {
-  "mapImage": "photos/map_1762400950791.png",
+  "mapImage": "photos/map_1762400958372.png",
   "closures": [
     {
       "number": 1,
       "name": "Перекрытие 1",
       "photos": [
-        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_1_1762397330156.jpg",
-        "https://byshizoid.github.io/CSN_UGBDD/photos/closure_1_2_1762397330162.jpg"
+        "photos/closure_1_1_1762400958376.jpg"
       ]
     }
   ]
