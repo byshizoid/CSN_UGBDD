@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта перекрытий</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Карта перекрытий</h1>
+            <p id="headerDescription">Просмотр карты перекрытий</p>
+        </header>
+
+        <!-- Кнопка входа в режим администратора -->
+        <div id="adminAccess" class="admin-access">
+            <button id="adminLoginBtn" class="btn btn-secondary">🔐 Режим администратора</button>
+        </div>
+
+        <!-- Режим настройки -->
+        <div id="setupSection" class="setup-section" style="display: none;">
+            <div class="admin-info">
+                <p>⚠️ Укажите данные для сохранения в GitHub:</p>
+                <div class="admin-config">
+                    <input type="text" id="repoOwner" placeholder="Имя пользователя GitHub" value="">
+                    <input type="text" id="repoName" placeholder="Название репозитория" value="">
+                    <input type="password" id="githubToken" placeholder="GitHub Personal Access Token">
+                    <button id="saveTokenBtn" class="btn btn-secondary">Сохранить настройки</button>
+                </div>
+                <p class="help-text">Токен остается только в вашем браузере. Как получить токен: Settings → Developer settings → Personal access tokens → Generate new token</p>
+            </div>
+            <div class="upload-area">
+                <h2>Загрузка фото перекрытий</h2>
+                <div class="upload-grid">
+                    <div class="upload-item">
+                        <label for="mapInput" class="upload-label">
+                            <div class="upload-box">
+                                <span class="upload-icon">🗺️</span>
+                                <span class="upload-text">Загрузить карту</span>
+                            </div>
+                            <input type="file" id="mapInput" accept="image/*" hidden>
+                        </label>
+                        <div id="mapPreview" class="preview"></div>
+                    </div>
+                </div>
+
+                <h3>Фото перекрытий</h3>
+                <div id="closuresList" class="closures-list">
+                    <div class="closure-item">
+                        <label class="upload-label">
+                            <div class="upload-box-small">
+                                <span class="upload-icon">📷</span>
+                                <span class="upload-text">Добавить фото</span>
+                            </div>
+                            <input type="file" class="closure-photo-input" accept="image/*" multiple data-number="1" hidden>
+                        </label>
+                        <div class="closure-info">
+                            <input type="text" class="closure-name-input" placeholder="Перекрытие 1" value="Перекрытие 1" data-number="1">
+                            <div class="closure-preview"></div>
+                        </div>
+                    </div>
+                </div>
+                <button id="addClosureBtn" class="btn btn-secondary">➕ Добавить перекрытие</button>
+            </div>
+
+            <div class="actions">
+                <button id="saveSetupBtn" class="btn btn-primary">Сохранить и начать работу</button>
+                <div id="autoSaveStatus" class="auto-save-status" style="display: none;">
+                    <span>💾 Автосохранение включено</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Режим просмотра -->
+        <div id="viewSection" class="view-section" style="display: none;">
+            <div class="map-display">
+                <h2>Карта</h2>
+                <div id="mapContainer" class="map-container">
+                    <img id="mapImage" src="" alt="Карта" style="display: none;">
+                </div>
+            </div>
+
+            <div class="closures-buttons">
+                <h2>Перекрытия</h2>
+                <div id="closuresButtons" class="closures-buttons-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для просмотра фото -->
+    <div id="photoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Перекрытие</h2>
+            <div class="photo-controls">
+                <button id="prevPhoto" class="nav-btn">‹</button>
+                <div class="photo-container">
+                    <div id="photoGallery" class="photo-gallery"></div>
+                </div>
+                <button id="nextPhoto" class="nav-btn">›</button>
+            </div>
+            <div class="photo-toolbar">
+                <span id="photoCounter" class="photo-counter">1 / 1</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

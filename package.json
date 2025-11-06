@@ -1,0 +1,15 @@
+{
+  "name": "map-closures-auto-sync",
+  "version": "1.0.0",
+  "description": "Автоматическая синхронизация изменений с GitHub",
+  "main": "auto-sync-to-github.js",
+  "scripts": {
+    "watch": "node auto-sync-to-github.js",
+    "sync": "node auto-sync-to-github.js",
+    "start": "npx http-server -p 8080 -o"
+  },
+  "keywords": ["git", "auto-sync", "github"],
+  "author": "",
+  "license": "MIT"
+}
+
