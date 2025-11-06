@@ -126,9 +126,15 @@ class ClosuresApp {
         });
 
         // Сохранение и переход в режим просмотра
-        document.getElementById('saveSetupBtn').addEventListener('click', () => {
-            this.saveAndSwitchMode();
-        });
+        const saveSetupBtn = document.getElementById('saveSetupBtn');
+        if (saveSetupBtn) {
+            saveSetupBtn.addEventListener('click', () => {
+                console.log('🔘 Кнопка "Сохранить и начать работу" нажата');
+                this.saveAndSwitchMode();
+            });
+        } else {
+            console.error('❌ Кнопка saveSetupBtn не найдена!');
+        }
 
         // Модальное окно
         document.querySelector('.close').addEventListener('click', () => {
@@ -875,26 +881,55 @@ class ClosuresApp {
     }
 
     async saveAndSwitchMode() {
-        if (!this.isAdminMode) return;
+        console.log('💾 saveAndSwitchMode вызвана');
+        console.log('🔍 isAdminMode:', this.isAdminMode);
+        
+        if (!this.isAdminMode) {
+            console.error('❌ Не в режиме администратора!');
+            alert('Ошибка: вы не в режиме администратора!');
+            return;
+        }
+        
+        // Убеждаемся, что есть текущее сопровождение
+        if (!this.currentEscortId) {
+            this.currentEscortId = 'default';
+            this.currentEscortName = this.currentEscortName || 'Сопровождение по умолчанию';
+        }
         
         // Собираем все данные
         const closures = [];
-        document.querySelectorAll('.closure-item').forEach((item, index) => {
-            const number = index + 1;
+        const closureItems = document.querySelectorAll('.closure-item');
+        console.log('📋 Найдено элементов перекрытий:', closureItems.length);
+        
+        closureItems.forEach((item, index) => {
             const nameInput = item.querySelector('.closure-name-input');
             const photoInput = item.querySelector('.closure-photo-input');
             
-            const name = nameInput ? nameInput.value : `Перекрытие ${number}`;
-            const closure = this.closures.find(c => c.number === parseInt(photoInput.dataset.number));
+            if (!photoInput) {
+                console.warn('⚠️ Не найден photoInput для элемента', index);
+                return;
+            }
+            
+            const closureNumber = parseInt(photoInput.dataset.number);
+            const name = nameInput ? nameInput.value.trim() : `Перекрытие ${closureNumber}`;
+            const closure = this.closures.find(c => c.number === closureNumber);
+            
+            console.log(`🔍 Перекрытие ${closureNumber}:`, {
+                name,
+                hasClosure: !!closure,
+                photosCount: closure?.photos?.length || 0
+            });
             
             if (closure && closure.photos && closure.photos.length > 0) {
                 closures.push({
-                    number: number,
+                    number: closureNumber,
                     name: name,
                     photos: closure.photos
                 });
             }
         });
+
+        console.log('✅ Собрано перекрытий:', closures.length);
 
         // Проверяем данные
         if (!this.mapImage) {
@@ -916,20 +951,24 @@ class ClosuresApp {
             closures: this.closures
         };
         
+        console.log('💾 Сохранение данных...');
+        
         // Сохраняем локально
         await this.saveToDB();
         
         // Сохраняем в GitHub
         try {
+            console.log('📤 Сохранение в GitHub...');
             await this.saveToGitHub(dataToSave);
             const filesCount = dataToSave.closures.reduce((sum, c) => sum + (c.photos ? c.photos.length : 0), 0) + (dataToSave.mapImage ? 1 : 0);
             alert(`✅ Данные успешно сохранены в GitHub!\n\nСохранено:\n- Карта: ${dataToSave.mapImage ? 'Да' : 'Нет'}\n- Фото перекрытий: ${filesCount}\n- Все файлы в папке: photos/\n\nТеперь они доступны всем пользователям.`);
         } catch (e) {
-            console.error('Ошибка сохранения в GitHub:', e);
+            console.error('❌ Ошибка сохранения в GitHub:', e);
             alert('⚠️ Данные сохранены локально, но не удалось сохранить в GitHub:\n' + e.message + '\n\nПроверьте настройки GitHub и убедитесь, что папка photos/ существует в репозитории.');
         }
         
         // Переключаем режим
+        console.log('👁️ Переключение в режим просмотра...');
         this.switchToViewMode();
     }
 
