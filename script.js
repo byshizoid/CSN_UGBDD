@@ -213,8 +213,30 @@ class ClosuresApp {
     }
 
     async autoSaveToGitHub() {
-        if (!this.isAdminMode || !this.autoSaveEnabled) return;
-        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) return;
+        console.log('🔄 autoSaveToGitHub вызван');
+        console.log('isAdminMode:', this.isAdminMode);
+        console.log('autoSaveEnabled:', this.autoSaveEnabled);
+        console.log('githubConfig:', {
+            owner: this.githubConfig.owner ? '✅' : '❌',
+            repo: this.githubConfig.repo ? '✅' : '❌',
+            token: this.githubConfig.token ? '✅' : '❌'
+        });
+        
+        if (!this.isAdminMode) {
+            console.log('❌ Не в режиме администратора');
+            return;
+        }
+        
+        if (!this.autoSaveEnabled) {
+            console.log('❌ Автосохранение не включено');
+            return;
+        }
+        
+        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            console.log('❌ Настройки GitHub не заполнены');
+            console.log('Пожалуйста, заполните настройки GitHub в режиме администратора');
+            return;
+        }
         
         // Собираем текущие данные
         const dataToSave = {
@@ -242,13 +264,22 @@ class ClosuresApp {
             }
         });
         
+        console.log('📦 Данные для сохранения:', {
+            hasMap: !!dataToSave.mapImage,
+            closuresCount: dataToSave.closures.length
+        });
+        
         // Проверяем, есть ли что сохранять
-        if (!dataToSave.mapImage && dataToSave.closures.length === 0) return;
+        if (!dataToSave.mapImage && dataToSave.closures.length === 0) {
+            console.log('ℹ️ Нет данных для сохранения');
+            return;
+        }
         
         // Показываем статус "Сохраняется..."
         this.showAutoSaveIndicator('saving', '🔄 Сохраняется в GitHub...');
         
         try {
+            console.log('📤 Начинаю сохранение в GitHub...');
             const result = await this.saveToGitHub(dataToSave);
             console.log('✅ Автосохранение в GitHub выполнено', result);
             
@@ -256,7 +287,11 @@ class ClosuresApp {
             const commitUrl = `https://github.com/${this.githubConfig.owner}/${this.githubConfig.repo}/commits/master`;
             this.showAutoSaveIndicator('success', '✅ Сохранено в GitHub', commitUrl);
         } catch (e) {
-            console.error('Ошибка автосохранения:', e);
+            console.error('❌ Ошибка автосохранения:', e);
+            console.error('Детали ошибки:', {
+                message: e.message,
+                stack: e.stack
+            });
             this.showAutoSaveIndicator('error', `❌ Ошибка: ${e.message}`);
         }
     }
@@ -317,10 +352,17 @@ class ClosuresApp {
         localStorage.setItem('github_repo', repo);
         localStorage.setItem('github_token', token);
         
+        console.log('✅ Настройки GitHub сохранены:', {
+            owner: owner,
+            repo: repo,
+            token: token ? '✅ (установлен)' : '❌'
+        });
+        
         // Включаем автосохранение если в режиме администратора
         if (this.isAdminMode) {
             this.autoSaveEnabled = true;
             this.setupAutoSave();
+            console.log('✅ Автосохранение включено');
         }
         
         alert('Настройки GitHub сохранены! Автосохранение включено.');
@@ -855,9 +897,15 @@ class ClosuresApp {
     }
 
     async saveToGitHub(data) {
+        console.log('📤 saveToGitHub вызван');
+        
         if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
-            throw new Error('Настройки GitHub не заполнены! Укажите данные в режиме администратора.');
+            const error = 'Настройки GitHub не заполнены! Укажите данные в режиме администратора.';
+            console.error('❌', error);
+            throw new Error(error);
         }
+        
+        console.log('✅ Настройки GitHub проверены');
         
         // Сохраняем карту и фото как отдельные файлы
         const filesToSave = [];
@@ -919,10 +967,12 @@ class ClosuresApp {
         }
         
         // Сохраняем JSON с путями к файлам
+        console.log('💾 Сохраняю data.json...');
         const jsonData = JSON.stringify(data, null, 2);
         let sha = null;
         
         try {
+            console.log('🔍 Проверяю существование data.json...');
             const getResponse = await fetch(
                 `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
                 {
@@ -936,13 +986,17 @@ class ClosuresApp {
             if (getResponse.ok) {
                 const fileData = await getResponse.json();
                 sha = fileData.sha;
+                console.log('✅ Файл data.json существует, получен SHA для обновления');
+            } else {
+                console.log('ℹ️ Файл data.json не существует, будет создан новый');
             }
         } catch (e) {
-            // Файл не существует
+            console.log('ℹ️ Файл data.json не существует, будет создан новый');
         }
         
         const content = btoa(unescape(encodeURIComponent(jsonData)));
         
+        console.log('📤 Отправляю data.json в GitHub...');
         const response = await fetch(
             `https://api.github.com/repos/${this.githubConfig.owner}/${this.githubConfig.repo}/contents/data.json`,
             {
@@ -961,14 +1015,29 @@ class ClosuresApp {
         );
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Ошибка сохранения');
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { message: errorText };
+            }
+            console.error('❌ Ошибка сохранения data.json:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData
+            });
+            throw new Error(errorData.message || `Ошибка сохранения: ${response.status} ${response.statusText}`);
         }
         
-        return true;
+        const result = await response.json();
+        console.log('✅ data.json успешно сохранен в GitHub:', result.commit.html_url);
+        return result;
     }
 
     async saveFileToGitHub(path, base64Content) {
+        console.log(`📤 Сохранение файла: ${path}`);
+        
         // Проверяем, существует ли файл (для обновления нужен SHA)
         let sha = null;
         try {
@@ -985,9 +1054,12 @@ class ClosuresApp {
             if (getResponse.ok) {
                 const fileData = await getResponse.json();
                 sha = fileData.sha;
+                console.log(`ℹ️ Файл ${path} существует, будет обновлен`);
+            } else {
+                console.log(`ℹ️ Файл ${path} не существует, будет создан новый`);
             }
         } catch (e) {
-            // Файл не существует, создадим новый
+            console.log(`ℹ️ Файл ${path} не существует, будет создан новый`);
         }
         
         const response = await fetch(
@@ -1008,12 +1080,23 @@ class ClosuresApp {
         );
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `Ошибка сохранения файла ${path}`);
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { message: errorText };
+            }
+            console.error(`❌ Ошибка сохранения файла ${path}:`, {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData
+            });
+            throw new Error(errorData.message || `Ошибка сохранения файла ${path}: ${response.status} ${response.statusText}`);
         }
         
         const result = await response.json();
-        console.log(`Файл сохранен в GitHub: ${result.content.html_url}`);
+        console.log(`✅ Файл сохранен в GitHub: ${result.content.html_url}`);
         return result;
     }
 }
