@@ -128,7 +128,21 @@
           ]
         }
       ]
+    },
+    "escort_1762423297960": {
+      "id": "escort_1762423297960",
+      "name": "ффф",
+      "mapImage": "photos/map_1762423315566.png",
+      "closures": [
+        {
+          "number": 2,
+          "name": "Перекрытие 2",
+          "photos": [
+            "photos/closure_2_1_1762423315571.jpg"
+          ]
+        }
+      ]
     }
   },
-  "defaultEscort": "default"
+  "defaultEscort": "escort_1762423297960"
 }
