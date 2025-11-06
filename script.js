@@ -64,6 +64,7 @@ class ClosuresApp {
         this.isAdminMode = false;
         this.currentClosure = null;
         this.currentPhotoIndex = 0;
+        this.currentEditingClosureNumber = null;
         // Пароль администратора (можно изменить)
         this.adminPassword = 'admin123';
         // Настройки GitHub (загружаются из localStorage)
@@ -165,6 +166,23 @@ class ClosuresApp {
                 this.closeModal();
             }
         });
+
+        // Редактирование фото в режиме администратора
+        document.getElementById('replacePhotoBtn').addEventListener('click', () => {
+            document.getElementById('replacePhotoInput').click();
+        });
+
+        document.getElementById('replacePhotoInput').addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                this.replaceCurrentPhoto(e.target.files[0]);
+            }
+        });
+
+        document.getElementById('deletePhotoBtn').addEventListener('click', () => {
+            if (confirm('Вы уверены, что хотите удалить это фото?')) {
+                this.deleteCurrentPhoto();
+            }
+        });
     }
 
     requestAdminAccess() {
@@ -238,31 +256,15 @@ class ClosuresApp {
             return;
         }
         
-        // Собираем текущие данные
+        // Собираем текущие данные из массива closures
         const dataToSave = {
             mapImage: this.mapImage,
-            closures: []
+            closures: this.closures.map(closure => ({
+                number: closure.number,
+                name: closure.name,
+                photos: closure.photos || []
+            })).filter(closure => closure.photos && closure.photos.length > 0)
         };
-        
-        // Собираем данные из всех перекрытий
-        document.querySelectorAll('.closure-item').forEach((item, index) => {
-            const number = index + 1;
-            const nameInput = item.querySelector('.closure-name-input');
-            const photoInput = item.querySelector('.closure-photo-input');
-            
-            if (!photoInput) return;
-            
-            const name = nameInput ? nameInput.value : `Перекрытие ${number}`;
-            const closure = this.closures.find(c => c.number === parseInt(photoInput.dataset.number));
-            
-            if (closure && closure.photos && closure.photos.length > 0) {
-                dataToSave.closures.push({
-                    number: number,
-                    name: name,
-                    photos: closure.photos
-                });
-            }
-        });
         
         console.log('📦 Данные для сохранения:', {
             hasMap: !!dataToSave.mapImage,
@@ -686,20 +688,35 @@ class ClosuresApp {
             button.className = 'closure-button';
             button.textContent = closure.name;
             button.addEventListener('click', () => {
-                this.showClosurePhoto(closure);
+                this.showClosurePhoto(closure.number);
             });
             buttonsContainer.appendChild(button);
         });
     }
 
-    showClosurePhoto(closure) {
+    showClosurePhoto(closureNumber) {
+        const closure = this.closures.find(c => c.number === closureNumber);
+        if (!closure || !closure.photos || closure.photos.length === 0) {
+            alert('Нет фото для этого перекрытия');
+            return;
+        }
+
         const modal = document.getElementById('photoModal');
         const modalTitle = document.getElementById('modalTitle');
-        const photoGallery = document.getElementById('photoGallery');
+        const adminControls = document.getElementById('adminPhotoControls');
         
         modalTitle.textContent = closure.name;
         this.currentClosure = closure;
         this.currentPhotoIndex = 0;
+        
+        // Показываем кнопки редактирования только в режиме администратора
+        if (this.isAdminMode) {
+            adminControls.style.display = 'flex';
+            // Сохраняем номер перекрытия для редактирования
+            this.currentEditingClosureNumber = closureNumber;
+        } else {
+            adminControls.style.display = 'none';
+        }
         
         // Отображаем галерею фото
         this.renderPhotoGallery(closure.photos);
@@ -772,6 +789,80 @@ class ClosuresApp {
         modal.classList.remove('show');
         this.currentClosure = null;
         this.currentPhotoIndex = 0;
+        this.currentEditingClosureNumber = null;
+        // Очищаем input для замены фото
+        document.getElementById('replacePhotoInput').value = '';
+    }
+
+    replaceCurrentPhoto(file) {
+        if (!this.isAdminMode || !this.currentClosure || !this.currentEditingClosureNumber) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const newPhoto = e.target.result;
+            
+            // Заменяем текущее фото
+            this.currentClosure.photos[this.currentPhotoIndex] = newPhoto;
+            
+            // Обновляем массив closures
+            const closure = this.closures.find(c => c.number === this.currentEditingClosureNumber);
+            if (closure) {
+                closure.photos[this.currentPhotoIndex] = newPhoto;
+            }
+            
+            // Обновляем отображение галереи
+            this.renderPhotoGallery(this.currentClosure.photos);
+            
+            // Автосохранение в GitHub
+            if (this.autoSaveEnabled) {
+                this.scheduleAutoSave();
+            }
+            
+            alert('Фото заменено! Изменения будут сохранены автоматически.');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    deleteCurrentPhoto() {
+        if (!this.isAdminMode || !this.currentClosure || !this.currentEditingClosureNumber) {
+            return;
+        }
+
+        // Удаляем фото из массива
+        this.currentClosure.photos.splice(this.currentPhotoIndex, 1);
+        
+        // Обновляем массив closures
+        const closure = this.closures.find(c => c.number === this.currentEditingClosureNumber);
+        if (closure) {
+            closure.photos.splice(this.currentPhotoIndex, 1);
+        }
+        
+        // Если фото больше нет, закрываем модальное окно
+        if (this.currentClosure.photos.length === 0) {
+            alert('Все фото удалены. Модальное окно будет закрыто.');
+            this.closeModal();
+            // Обновляем кнопки перекрытий
+            this.renderClosureButtons();
+            return;
+        }
+        
+        // Если удалили последнее фото, переходим на предыдущее
+        if (this.currentPhotoIndex >= this.currentClosure.photos.length) {
+            this.currentPhotoIndex = this.currentClosure.photos.length - 1;
+        }
+        
+        // Обновляем отображение галереи
+        this.renderPhotoGallery(this.currentClosure.photos);
+        
+        // Обновляем кнопки перекрытий (если фото закончились, кнопка должна исчезнуть)
+        this.renderClosureButtons();
+        
+        // Автосохранение в GitHub
+        if (this.autoSaveEnabled) {
+            this.scheduleAutoSave();
+        }
     }
 
     async saveToDB() {

@@ -519,6 +519,39 @@ header p {
     color: #333;
 }
 
+.admin-photo-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-sm.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-sm.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-sm.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-sm.btn-danger:hover {
+    background: #c82333;
+}
+
 .admin-access {
     text-align: center;
     margin-bottom: 20px;
