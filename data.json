@@ -1,0 +1,12 @@
+{
+  "mapImage": "photos/map_1762400958372.png",
+  "closures": [
+    {
+      "number": 1,
+      "name": "Перекрытие 1",
+      "photos": [
+        "photos/closure_1_1_1762400958376.jpg"
+      ]
+    }
+  ]
+}
