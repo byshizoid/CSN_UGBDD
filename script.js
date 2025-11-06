@@ -1112,33 +1112,39 @@ class ClosuresApp {
             try {
                 // Используем уникальный timestamp для обхода кеша
                 const cacheBuster = Date.now();
-                const updatingResponse = await fetch(
-                    `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${cacheBuster}`,
-                    { 
-                        cache: 'no-store'
-                        // Не добавляем кастомные заголовки - они вызывают CORS preflight
-                    }
-                );
+                const updatingUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/updating.json?t=${cacheBuster}`;
                 
-                if (updatingResponse.ok) {
+                const updatingResponse = await fetch(updatingUrl, { 
+                    cache: 'no-store'
+                    // НЕ добавляем кастомные заголовки - они вызывают CORS preflight
+                }).catch(err => {
+                    // Игнорируем ошибки сети
+                    console.debug('🔍 Ошибка при проверке updating.json:', err.message);
+                    return null;
+                });
+                
+                if (updatingResponse && updatingResponse.ok) {
                     try {
                         const status = await updatingResponse.json();
                         if (status && status.isUpdating === true) {
                             hasUpdatingFile = true;
                             console.log('🔄 Обнаружен файл updating.json - идет обновление');
+                        } else {
+                            console.debug('🔍 updating.json существует, но isUpdating = false');
                         }
                     } catch (parseError) {
                         console.warn('⚠️ Ошибка парсинга updating.json:', parseError);
                     }
-                } else if (updatingResponse.status === 404) {
+                } else if (updatingResponse && updatingResponse.status === 404) {
                     // Файл не существует - это нормально, значит обновление не активно
                     hasUpdatingFile = false;
-                } else {
+                    console.debug('🔍 updating.json не найден (404) - обновление не активно');
+                } else if (updatingResponse) {
                     console.warn('⚠️ Неожиданный статус при проверке updating.json:', updatingResponse.status);
                 }
             } catch (e) {
                 // Файл не существует или ошибка сети - это нормально
-                // Не логируем ошибки, чтобы не засорять консоль
+                console.debug('🔍 Ошибка при проверке updating.json:', e.message);
                 hasUpdatingFile = false;
             }
             
@@ -1241,6 +1247,9 @@ class ClosuresApp {
             // Если есть файл updating.json или недавний коммит - показываем табличку
             const shouldShowOverlay = hasUpdatingFile || hasRecentCommit;
             
+            // Логируем результат проверки для отладки
+            console.debug(`🔍 Проверка статуса: updating.json=${hasUpdatingFile}, recentCommit=${hasRecentCommit}, shouldShow=${shouldShowOverlay}, isAdmin=${this.isAdminMode}`);
+            
             // Для администратора не показываем, так как у него свой оверлей во время сохранения
             if (!this.isAdminMode) {
                 const overlay = document.getElementById('loadingOverlay');
@@ -1250,12 +1259,20 @@ class ClosuresApp {
                     
                     if (shouldShowOverlay && !isCurrentlyVisible) {
                         // Нужно показать оверлей
+                        console.log('📢 Показываю табличку загрузки');
                         this.showLoadingOverlay('Идёт обновление данных на сервере...\nСайт временно недоступен');
                     } else if (!shouldShowOverlay && isCurrentlyVisible) {
                         // Нужно скрыть оверлей
+                        console.log('📢 Скрываю табличку загрузки');
                         this.hideLoadingOverlay();
+                    } else {
+                        console.debug(`🔍 Табличка уже в правильном состоянии: visible=${isCurrentlyVisible}, shouldShow=${shouldShowOverlay}`);
                     }
+                } else {
+                    console.warn('⚠️ Элемент loadingOverlay не найден!');
                 }
+            } else {
+                console.debug('🔍 Администратор - не показываю табличку');
             }
             
             return shouldShowOverlay;
