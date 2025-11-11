@@ -238,7 +238,76 @@
           ]
         }
       ]
+    },
+    "escort_1762892486667": {
+      "id": "escort_1762892486667",
+      "name": "ВЕЛОПРОБЕГ",
+      "mapImage": "photos/map_1762892919931.png",
+      "closures": [
+        {
+          "number": 2,
+          "name": "Перекрытие 1",
+          "photos": [
+            "photos/closure_2_1_1762892919931.jpg",
+            "photos/closure_2_2_1762892919931.jpg"
+          ]
+        },
+        {
+          "number": 3,
+          "name": "Перекрытие 2",
+          "photos": [
+            "photos/closure_3_1_1762892919931.jpg"
+          ]
+        },
+        {
+          "number": 4,
+          "name": "Перекрытие 3",
+          "photos": [
+            "photos/closure_4_1_1762892919932.jpg",
+            "photos/closure_4_2_1762892919938.jpg"
+          ]
+        },
+        {
+          "number": 5,
+          "name": "Перекрытие 4",
+          "photos": [
+            "photos/closure_5_1_1762892919945.jpg",
+            "photos/closure_5_2_1762892919945.jpg",
+            "photos/closure_5_3_1762892919945.jpg",
+            "photos/closure_5_4_1762892919951.jpg"
+          ]
+        },
+        {
+          "number": 6,
+          "name": "Перекрытие 5",
+          "photos": [
+            "photos/closure_6_1_1762892919956.jpg"
+          ]
+        },
+        {
+          "number": 7,
+          "name": "Перекрытие 6",
+          "photos": [
+            "photos/closure_7_1_1762892919961.jpg"
+          ]
+        },
+        {
+          "number": 8,
+          "name": "Перекрытие 7",
+          "photos": [
+            "photos/closure_8_1_1762892919968.jpg"
+          ]
+        },
+        {
+          "number": 9,
+          "name": "Перекрытие 8",
+          "photos": [
+            "photos/closure_9_1_1762892919974.jpg",
+            "photos/closure_9_2_1762892919977.jpg"
+          ]
+        }
+      ]
     }
   },
-  "defaultEscort": "escort_1762437451023"
+  "defaultEscort": "escort_1762892486667"
 }
